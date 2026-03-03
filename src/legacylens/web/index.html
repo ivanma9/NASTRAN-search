@@ -607,7 +607,18 @@
 
             <div class="results-panel">
                 <div v-if="!currentQuery" class="results-empty">
-                    Launch a query to begin mission analysis...
+                    <p style="margin-bottom: 1.5rem;">Launch a query to begin mission analysis...</p>
+                    <div style="text-align: left; max-width: 600px; margin: 0 auto;">
+                        <h3 style="color: var(--nasa-gold); font-family: var(--font-mono); font-size: 0.85rem; margin-bottom: 0.75rem;">SAMPLE QUERIES</h3>
+                        <ul style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+                            <li v-for="q in sampleQueries" :key="q" @click="selectFromHistory(q)"
+                                style="padding: 0.6rem 1rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; cursor: pointer; font-size: 0.9rem; color: var(--text-secondary); transition: all 0.2s;"
+                                onmouseover="this.style.borderColor='var(--nasa-blue)'; this.style.color='var(--text-primary)'"
+                                onmouseout="this.style.borderColor='rgba(255,255,255,0.08)'; this.style.color='var(--text-secondary)'">
+                                {{ q }}
+                            </li>
+                        </ul>
+                    </div>
                 </div>
 
                 <div v-else>
@@ -681,7 +692,15 @@
                         chunks: 12340,
                         updated: '2h ago'
                     },
-                    apiBase: '/api'
+                    apiBase: '/api',
+                    sampleQueries: [
+                        'What does the DCOMP subroutine do?',
+                        'How does NASTRAN handle matrix decomposition?',
+                        'What subroutines reference COMMON block /SYSTEM/?',
+                        'How are stiffness matrices assembled?',
+                        'What is the purpose of the XREAD subroutine?',
+                        'How does NASTRAN handle singular matrices?',
+                    ]
                 };
             },
             mounted() {
