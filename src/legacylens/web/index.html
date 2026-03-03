@@ -971,15 +971,8 @@
             methods: {
                 renderMarkdown(text) {
                     if (!text || typeof text !== 'string') return '';
-
-                    // Simple HTML rendering: escape dangerous chars and preserve formatting
-                    return text
-                        .replace(/&/g, '&amp;')
-                        .replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;')
-                        .split('\n\n')
-                        .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
-                        .join('');
+                    // Return text with basic HTML escaping, no formatting
+                    return text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 },
 
                 async loadIndexStatus() {
