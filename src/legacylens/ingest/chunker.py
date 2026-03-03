@@ -206,8 +206,14 @@ def chunk_fortran(
     # Flush remaining
     _flush()
 
-    # Compute token counts
+    # Compute token counts and filter out garbage/tiny chunks
+    valid_chunks = []
     for chunk in chunks:
         chunk.token_count = _count_tokens(chunk.text)
+        # Skip chunks that are essentially empty (control chars, whitespace only, < 5 tokens)
+        stripped = chunk.text.strip()
+        if len(stripped) < 10 or chunk.token_count < 5:
+            continue
+        valid_chunks.append(chunk)
 
-    return chunks
+    return valid_chunks
