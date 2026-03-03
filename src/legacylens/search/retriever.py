@@ -19,12 +19,17 @@ COMMON_BLOCK_RE = re.compile(r"(?:COMMON\s+(?:block\s+)?)?/(\w+)/", re.IGNORECAS
 SUBROUTINE_RE = re.compile(r"\b(?:subroutine|function|program)\s+(\w+)\b", re.IGNORECASE)
 UNIT_NAME_RE = re.compile(r"\b([A-Z][A-Z0-9]{2,})\b")
 
+# ChromaDB returns cosine distance (0 = identical, 2 = opposite).
+# Discard results with distance above this threshold (low relevance).
+MAX_DISTANCE_THRESHOLD = 1.2
+
 
 def retrieve(query: str, top_k: int | None = None) -> list[dict]:
     """Retrieve relevant chunks for a query.
 
     Uses vector similarity search augmented with index lookups when the query
     mentions specific COMMON blocks or subroutine names.
+    Filters out results below a minimum relevance threshold.
 
     Returns:
         List of dicts with keys: text, metadata, score, index_context
@@ -46,9 +51,13 @@ def retrieve(query: str, top_k: int | None = None) -> list[dict]:
         n_results=k,
     )
 
-    # Build result list
+    # Build result list, filtering by relevance threshold
     retrieved = []
     for i in range(len(results["ids"][0])):
+        distance = results["distances"][0][i] if results["distances"] else 0
+        if distance > MAX_DISTANCE_THRESHOLD:
+            continue
+
         metadata = results["metadatas"][0][i]
         # Decode JSON-encoded list fields
         for field in ("common_blocks", "calls", "entry_points", "includes", "externals"):
@@ -61,7 +70,7 @@ def retrieve(query: str, top_k: int | None = None) -> list[dict]:
         retrieved.append({
             "text": results["documents"][0][i],
             "metadata": metadata,
-            "score": results["distances"][0][i] if results["distances"] else 0,
+            "score": distance,
             "index_context": "",
         })
 

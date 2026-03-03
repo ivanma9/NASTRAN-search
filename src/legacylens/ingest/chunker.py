@@ -206,14 +206,26 @@ def chunk_fortran(
     # Flush remaining
     _flush()
 
-    # Compute token counts and filter out garbage/tiny chunks
+    # Compute token counts and filter out garbage/tiny/comment-only chunks
     valid_chunks = []
     for chunk in chunks:
         chunk.token_count = _count_tokens(chunk.text)
-        # Skip chunks that are essentially empty (control chars, whitespace only, < 5 tokens)
         stripped = chunk.text.strip()
+
+        # Skip chunks that are essentially empty (control chars, whitespace only, < 5 tokens)
         if len(stripped) < 10 or chunk.token_count < 5:
             continue
+
+        # Skip comment-only chunks (no actual code)
+        lines = stripped.splitlines()
+        code_lines = [
+            l for l in lines
+            if l.strip() and not l.strip().startswith(("C", "*", "c", "!"))
+               and not all(ch in "C c*!=- " for ch in l.strip())
+        ]
+        if not code_lines:
+            continue
+
         valid_chunks.append(chunk)
 
     return valid_chunks

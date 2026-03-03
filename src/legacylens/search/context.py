@@ -8,7 +8,8 @@ When answering questions:
 - Explain FORTRAN-specific constructs (COMMON blocks, ENTRY statements, fixed-form conventions)
 - Note shared state via COMMON blocks when relevant
 - Reference the call relationships between subroutines when applicable
-- Be precise about what the code does vs. what you're inferring"""
+- Be precise about what the code does vs. what you're inferring
+- If the retrieved code context is not relevant to the question, say so honestly rather than fabricating an answer. Suggest what kind of question would work better."""
 
 
 def assemble_context(results: list[dict], indices: dict | None = None) -> str:
