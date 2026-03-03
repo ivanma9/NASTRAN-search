@@ -895,21 +895,31 @@
     <script>
         const { createApp } = Vue;
 
-        // Configure marked for rich markdown rendering
-        marked.setOptions({
-            breaks: true,
-            gfm: true,
-            headerIds: true,
-            mangle: false
-        });
+        // Configure marked for rich markdown rendering (with safety check)
+        function configureMarked() {
+            if (typeof marked === 'undefined') {
+                console.warn('marked library not loaded yet, retrying...');
+                setTimeout(configureMarked, 100);
+                return;
+            }
 
-        // Custom renderer for code blocks with syntax highlighting
-        const renderer = new marked.Renderer();
-        renderer.code = (code) => {
-            const highlighted = hljs.highlightAuto(code.text).value;
-            return `<pre><code class="hljs language-${code.lang || 'plaintext'}">${highlighted}</code></pre>`;
-        };
-        marked.setOptions({ renderer });
+            marked.setOptions({
+                breaks: true,
+                gfm: true,
+                headerIds: true,
+                mangle: false
+            });
+
+            // Custom renderer for code blocks with syntax highlighting
+            const renderer = new marked.Renderer();
+            renderer.code = (code) => {
+                const highlighted = hljs.highlightAuto(code.text).value;
+                return `<pre><code class="hljs language-${code.lang || 'plaintext'}">${highlighted}</code></pre>`;
+            };
+            marked.setOptions({ renderer });
+        }
+
+        configureMarked();
 
         createApp({
             data() {
