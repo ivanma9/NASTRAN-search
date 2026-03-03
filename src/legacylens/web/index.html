@@ -625,6 +625,35 @@
             animation: fade-in-down 0.6s ease-out 0.3s both;
         }
 
+        .loading-fact {
+            padding: 2rem;
+            background: linear-gradient(135deg, rgba(0, 58, 112, 0.1), rgba(255, 184, 28, 0.08));
+            border: 2px solid rgba(255, 184, 28, 0.3);
+            border-radius: 8px;
+            text-align: center;
+            margin: 2rem 0;
+            animation: fade-in-up 0.6s ease-out both;
+        }
+
+        .loading-fact-content {
+            font-size: 1.15rem;
+            color: var(--text-dark);
+            font-weight: 500;
+            line-height: 1.6;
+            min-height: 3rem;
+        }
+
+        .loading-spinner-inline {
+            display: inline-block;
+            width: 0.8rem;
+            height: 0.8rem;
+            border: 2px solid rgba(255, 184, 28, 0.3);
+            border-top: 2px solid var(--accent-gold);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-top: 1rem;
+        }
+
         .error-message strong {
             font-weight: 700;
         }
@@ -802,6 +831,13 @@
                         <p class="query-echo">{{ currentQuery }}</p>
                     </div>
 
+                    <div v-if="loading && currentFact" class="loading-fact">
+                        <div class="loading-fact-content">
+                            {{ currentFact }}
+                        </div>
+                        <div class="loading-spinner-inline"></div>
+                    </div>
+
                     <div v-if="error" class="error-message">
                         <strong>⚠ Mission Alert:</strong> {{ error }}
                     </div>
@@ -891,6 +927,8 @@
                         updated: '2h ago'
                     },
                     apiBase: '/api',
+                    currentFact: '',
+                    factInterval: null,
                     sampleQueries: [
                         'What does the DCOMP subroutine do?',
                         'How does NASTRAN handle matrix decomposition?',
@@ -898,6 +936,28 @@
                         'How are stiffness matrices assembled?',
                         'What is the purpose of the XREAD subroutine?',
                         'How does NASTRAN handle singular matrices?',
+                    ],
+                    nasaFacts: [
+                        '🚀 NASTRAN stands for "NAsa STRuctural ANalysis"',
+                        '🛰️ NASTRAN was first developed in 1965 to analyze aircraft structures',
+                        '🌌 The Apollo Guidance Computer had only 64KB of RAM—less than a single web image',
+                        '⚙️ Finite Element Method (FEM) divides complex structures into tiny elements for analysis',
+                        '🔬 Eigenvalue analysis finds the natural frequencies at which structures vibrate',
+                        '📊 Stiffness matrices represent how structures resist deformation',
+                        '🏗️ COMMON blocks in FORTRAN share data between subroutines—early shared memory',
+                        '💾 Fixed-form FORTRAN required specific column positions for code—rigorous formatting!',
+                        '🔧 Continuation lines in FORTRAN used column 6 to indicate code spread across multiple lines',
+                        '🎯 Matrix decomposition breaks down complex stiffness problems into solvable pieces',
+                        '⚡ XREAD subroutine reads bulk data cards—the input format for NASTRAN models',
+                        '🔗 DCOMP performs matrix decomposition using Cholesky or other factorization methods',
+                        '📈 Modal analysis reveals how structures naturally want to vibrate and deform',
+                        '🛡️ Singularity detection prevents invalid solutions in structural analysis',
+                        '🌐 FORTRAN 77 was the standard for scientific computing in the 1980s-2000s',
+                        '🚁 Helicopter rotor blades require advanced structural analysis to prevent flutter',
+                        '🛩️ Aircraft wings use NASTRAN to optimize for strength while minimizing weight',
+                        '🔐 Double precision floating point was critical for accurate structural calculations',
+                        '⏱️ NASTRAN runs could take hours on mainframe computers—optimization was crucial',
+                        '📡 Modern AI helps decode legacy FORTRAN—bridging 60 years of aerospace engineering'
                     ]
                 };
             },
@@ -965,6 +1025,26 @@
                     return { level: 'low', label: 'Low' };
                 },
 
+                getRandomFact() {
+                    const randomIdx = Math.floor(Math.random() * this.nasaFacts.length);
+                    return this.nasaFacts[randomIdx];
+                },
+
+                startLoadingFacts() {
+                    this.currentFact = this.getRandomFact();
+                    this.factInterval = setInterval(() => {
+                        this.currentFact = this.getRandomFact();
+                    }, 3000); // Change fact every 3 seconds
+                },
+
+                stopLoadingFacts() {
+                    if (this.factInterval) {
+                        clearInterval(this.factInterval);
+                        this.factInterval = null;
+                    }
+                    this.currentFact = '';
+                },
+
                 async performSearch() {
                     if (!this.searchInput.trim()) {
                         this.error = 'Please enter a query.';
@@ -975,6 +1055,7 @@
                     this.error = null;
                     this.currentQuery = this.searchInput;
                     this.results = { answer: '', chunks: [] };
+                    this.startLoadingFacts();
 
                     try {
                         const response = await fetch(`${this.apiBase}/ask/stream`, {
@@ -1035,6 +1116,7 @@
                         this.results = null;
                     } finally {
                         this.loading = false;
+                        this.stopLoadingFacts();
                     }
                 },
 
