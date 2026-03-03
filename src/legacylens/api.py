@@ -8,13 +8,14 @@ import logging
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from pydantic import BaseModel
 
 from legacylens.config import get_settings
 from legacylens.search.context import assemble_context
-from legacylens.search.generator import generate_answer
+from legacylens.search.generator import generate_answer, generate_answer_stream
 from legacylens.search.retriever import retrieve
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -116,25 +117,61 @@ async def ask_question(request: QueryRequest):
         context = assemble_context(results)
         answer = generate_answer(request.question, context)
 
-        chunks = []
-        for r in results:
-            meta = r["metadata"]
-            chunks.append(
-                ChunkResponse(
-                    file_path=meta.get("file_path", ""),
-                    line_start=meta.get("line_start", 0),
-                    line_end=meta.get("line_end", 0),
-                    unit_name=meta.get("unit_name", ""),
-                    unit_type=meta.get("unit_type", ""),
-                    text=r["text"],
-                    score=r.get("score", 0),
-                )
-            )
-
+        chunks = _build_chunks(results)
         return QueryResponse(answer=answer, chunks=chunks)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Query failed: {e}")
+
+
+@app.post("/api/ask/stream")
+async def ask_question_stream(request: QueryRequest):
+    """Stream an answer with SSE. Sends chunks metadata first, then answer tokens."""
+    if not request.question or not request.question.strip():
+        raise HTTPException(status_code=400, detail="Question cannot be empty")
+
+    try:
+        results = retrieve(request.question, top_k=request.top_k)
+        chunks = _build_chunks(results)
+        context = assemble_context(results) if results else ""
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Retrieval failed: {e}")
+
+    def event_stream():
+        # First event: send the retrieved chunks
+        chunks_data = [c.model_dump() for c in chunks]
+        yield f"event: chunks\ndata: {json.dumps(chunks_data)}\n\n"
+
+        if not results:
+            yield f"event: token\ndata: {json.dumps({'t': 'No relevant code found.'})}\n\n"
+            yield "event: done\ndata: {}\n\n"
+            return
+
+        # Stream answer tokens
+        for token in generate_answer_stream(request.question, context):
+            yield f"event: token\ndata: {json.dumps({'t': token})}\n\n"
+
+        yield "event: done\ndata: {}\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+def _build_chunks(results: list[dict]) -> list[ChunkResponse]:
+    chunks = []
+    for r in results:
+        meta = r["metadata"]
+        chunks.append(
+            ChunkResponse(
+                file_path=meta.get("file_path", ""),
+                line_start=meta.get("line_start", 0),
+                line_end=meta.get("line_end", 0),
+                unit_name=meta.get("unit_name", ""),
+                unit_type=meta.get("unit_type", ""),
+                text=r["text"],
+                score=r.get("score", 0),
+            )
+        )
+    return chunks
 
 
 @app.get("/api/health")
