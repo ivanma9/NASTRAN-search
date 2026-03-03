@@ -10,10 +10,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
-    <!-- Syntax Highlighting & Markdown -->
+    <!-- Syntax Highlighting -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
 
     <style>
         * {
@@ -895,32 +894,6 @@
     <script>
         const { createApp } = Vue;
 
-        let markedConfigured = false;
-
-        // Initialize marked lazily on first use
-        function ensureMarkedReady() {
-            if (markedConfigured || typeof marked === 'undefined') return;
-
-            try {
-                marked.setOptions({
-                    breaks: true,
-                    gfm: true,
-                    headerIds: true,
-                    mangle: false
-                });
-
-                const renderer = new marked.Renderer();
-                renderer.code = (code) => {
-                    const highlighted = hljs.highlightAuto(code.text).value;
-                    return `<pre><code class="hljs language-${code.lang || 'plaintext'}">${highlighted}</code></pre>`;
-                };
-                marked.setOptions({ renderer });
-                markedConfigured = true;
-            } catch (e) {
-                console.warn('Could not configure marked:', e);
-            }
-        }
-
         createApp({
             data() {
                 return {
@@ -999,31 +972,14 @@
                 renderMarkdown(text) {
                     if (!text || typeof text !== 'string') return '';
 
-                    try {
-                        // Simple fallback: plain text with line breaks
-                        let html = text
-                            .replace(/&/g, '&amp;')
-                            .replace(/</g, '&lt;')
-                            .replace(/>/g, '&gt;')
-                            .split('\n\n')
-                            .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
-                            .join('');
-
-                        // Try marked if available
-                        if (typeof marked !== 'undefined') {
-                            try {
-                                ensureMarkedReady();
-                                html = marked(text);
-                            } catch (e) {
-                                // Use fallback above
-                            }
-                        }
-
-                        return html;
-                    } catch (err) {
-                        console.error('renderMarkdown error:', err);
-                        return `<p>${String(text).substring(0, 500)}</p>`;
-                    }
+                    // Simple HTML rendering: escape dangerous chars and preserve formatting
+                    return text
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .split('\n\n')
+                        .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+                        .join('');
                 },
 
                 async loadIndexStatus() {
