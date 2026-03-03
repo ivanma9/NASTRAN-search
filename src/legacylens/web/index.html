@@ -895,31 +895,31 @@
     <script>
         const { createApp } = Vue;
 
-        // Configure marked for rich markdown rendering (with safety check)
-        function configureMarked() {
-            if (typeof marked === 'undefined') {
-                console.warn('marked library not loaded yet, retrying...');
-                setTimeout(configureMarked, 100);
-                return;
+        let markedConfigured = false;
+
+        // Initialize marked lazily on first use
+        function ensureMarkedReady() {
+            if (markedConfigured || typeof marked === 'undefined') return;
+
+            try {
+                marked.setOptions({
+                    breaks: true,
+                    gfm: true,
+                    headerIds: true,
+                    mangle: false
+                });
+
+                const renderer = new marked.Renderer();
+                renderer.code = (code) => {
+                    const highlighted = hljs.highlightAuto(code.text).value;
+                    return `<pre><code class="hljs language-${code.lang || 'plaintext'}">${highlighted}</code></pre>`;
+                };
+                marked.setOptions({ renderer });
+                markedConfigured = true;
+            } catch (e) {
+                console.warn('Could not configure marked:', e);
             }
-
-            marked.setOptions({
-                breaks: true,
-                gfm: true,
-                headerIds: true,
-                mangle: false
-            });
-
-            // Custom renderer for code blocks with syntax highlighting
-            const renderer = new marked.Renderer();
-            renderer.code = (code) => {
-                const highlighted = hljs.highlightAuto(code.text).value;
-                return `<pre><code class="hljs language-${code.lang || 'plaintext'}">${highlighted}</code></pre>`;
-            };
-            marked.setOptions({ renderer });
         }
-
-        configureMarked();
 
         createApp({
             data() {
@@ -999,20 +999,20 @@
                 renderMarkdown(text) {
                     if (!text) return '';
 
-                    // Safety check: if marked isn't loaded yet, return escaped text
+                    // Ensure marked is configured before use
+                    ensureMarkedReady();
+
+                    // If marked still isn't available, return plain text
                     if (typeof marked === 'undefined') {
-                        return text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        return `<p>${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`;
                     }
 
                     try {
                         const html = marked(text);
-                        // Sanitize: allow common HTML tags but strip scripts
-                        const div = document.createElement('div');
-                        div.innerHTML = html;
                         return html;
                     } catch (err) {
                         console.error('Error rendering markdown:', err);
-                        return text;
+                        return `<p>${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`;
                     }
                 },
 
