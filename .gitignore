@@ -1,0 +1,11 @@
+NASTRAN-95/
+.env
+data/chromadb/
+data/indices/
+__pycache__/
+*.pyc
+.DS_Store
+*.egg-info/
+dist/
+build/
+.venv/
