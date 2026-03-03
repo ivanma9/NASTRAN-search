@@ -971,8 +971,44 @@
             methods: {
                 renderMarkdown(text) {
                     if (!text || typeof text !== 'string') return '';
-                    // Return text with basic HTML escaping, no formatting
-                    return text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+                    // Escape HTML
+                    let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+                    // Inline code: `code`
+                    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+                    // Bold: **text**
+                    html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+                    // Split into paragraphs on double newlines
+                    html = html.split('\n\n').map(block => {
+                        block = block.trim();
+                        if (!block) return '';
+
+                        // Numbered list: lines starting with 1. 2. etc.
+                        if (/^\d+\.\s/.test(block)) {
+                            const items = block.split('\n')
+                                .filter(l => l.trim())
+                                .map(l => '<li>' + l.replace(/^\d+\.\s*/, '') + '</li>')
+                                .join('');
+                            return '<ol>' + items + '</ol>';
+                        }
+
+                        // Bullet list: lines starting with -
+                        if (/^[-•]\s/.test(block)) {
+                            const items = block.split('\n')
+                                .filter(l => l.trim())
+                                .map(l => '<li>' + l.replace(/^[-•]\s*/, '') + '</li>')
+                                .join('');
+                            return '<ul>' + items + '</ul>';
+                        }
+
+                        // Regular paragraph
+                        return '<p>' + block.replace(/\n/g, '<br>') + '</p>';
+                    }).join('');
+
+                    return html;
                 },
 
                 async loadIndexStatus() {
