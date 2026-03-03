@@ -997,30 +997,33 @@
             },
             methods: {
                 renderMarkdown(text) {
-                    if (!text) return '';
+                    if (!text || typeof text !== 'string') return '';
 
-                    // Fallback: simple plain text with line breaks
-                    // This works even if marked library doesn't load
-                    let html = text
-                        .replace(/&/g, '&amp;')
-                        .replace(/</g, '&lt;')
-                        .replace(/>/g, '&gt;')
-                        .split('\n\n')
-                        .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
-                        .join('');
+                    try {
+                        // Simple fallback: plain text with line breaks
+                        let html = text
+                            .replace(/&/g, '&amp;')
+                            .replace(/</g, '&lt;')
+                            .replace(/>/g, '&gt;')
+                            .split('\n\n')
+                            .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+                            .join('');
 
-                    // Try to use marked if available for better formatting
-                    if (typeof marked !== 'undefined') {
-                        try {
-                            ensureMarkedReady();
-                            html = marked(text);
-                        } catch (err) {
-                            // Fall back to plain text above
-                            console.warn('Could not use marked, using plain text');
+                        // Try marked if available
+                        if (typeof marked !== 'undefined') {
+                            try {
+                                ensureMarkedReady();
+                                html = marked(text);
+                            } catch (e) {
+                                // Use fallback above
+                            }
                         }
-                    }
 
-                    return html;
+                        return html;
+                    } catch (err) {
+                        console.error('renderMarkdown error:', err);
+                        return `<p>${String(text).substring(0, 500)}</p>`;
+                    }
                 },
 
                 async loadIndexStatus() {
