@@ -1015,7 +1015,7 @@
                                             });
                                         }, 0);
                                     } else if (eventType === 'token') {
-                                        this.results.answer += data.t;
+                                        this.results = { ...this.results, answer: this.results.answer + data.t };
                                     }
                                 }
                             }
