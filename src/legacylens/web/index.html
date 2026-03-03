@@ -10,9 +10,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 
-    <!-- Syntax Highlighting -->
+    <!-- Syntax Highlighting & Markdown -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
 
     <style>
         * {
@@ -334,9 +335,142 @@
 
         .answer-text {
             font-size: 1rem;
-            line-height: 1.6;
+            line-height: 1.8;
             color: var(--text-dark);
             margin-bottom: 1.5rem;
+        }
+
+        /* Markdown Rich Text Styling */
+        .answer-text h1, .answer-text h2, .answer-text h3, .answer-text h4 {
+            font-family: "Space Mono", monospace;
+            color: var(--nasa-blue);
+            margin-top: 1.5rem;
+            margin-bottom: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .answer-text h1 { font-size: 1.3rem; }
+        .answer-text h2 { font-size: 1.15rem; }
+        .answer-text h3 { font-size: 1rem; }
+        .answer-text h4 { font-size: 0.95rem; }
+
+        .answer-text p {
+            margin-bottom: 1rem;
+        }
+
+        .answer-text strong {
+            color: var(--nasa-red);
+            font-weight: 700;
+        }
+
+        .answer-text em {
+            color: var(--text-light);
+            font-style: italic;
+        }
+
+        .answer-text code:not(.hljs) {
+            background: rgba(0, 58, 112, 0.15);
+            color: var(--nasa-blue);
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.9rem;
+            border: 1px solid rgba(0, 58, 112, 0.3);
+        }
+
+        .answer-text pre {
+            background: #282c34;
+            border-left: 4px solid var(--accent-gold);
+            border-radius: 6px;
+            padding: 1.2rem;
+            overflow-x: auto;
+            margin: 1.2rem 0;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .answer-text pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+            border: none;
+        }
+
+        .answer-text ul, .answer-text ol {
+            margin: 1rem 0 1rem 2rem;
+            padding: 0;
+        }
+
+        .answer-text li {
+            margin-bottom: 0.6rem;
+            line-height: 1.7;
+        }
+
+        .answer-text ul li:before {
+            content: "▸ ";
+            color: var(--accent-gold);
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+
+        .answer-text ul {
+            list-style: none;
+        }
+
+        .answer-text blockquote {
+            border-left: 4px solid var(--accent-gold);
+            padding-left: 1rem;
+            margin: 1rem 0;
+            color: var(--text-light);
+            font-style: italic;
+            background: rgba(255, 184, 28, 0.05);
+            padding: 0.8rem 1rem;
+            border-radius: 4px;
+        }
+
+        .answer-text a {
+            color: var(--nasa-blue);
+            text-decoration: underline;
+            transition: color 0.2s;
+        }
+
+        .answer-text a:hover {
+            color: var(--accent-gold);
+        }
+
+        .answer-text hr {
+            border: none;
+            border-top: 2px solid rgba(255, 184, 28, 0.3);
+            margin: 1.5rem 0;
+        }
+
+        .answer-text table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 1rem 0;
+            border: 1px solid rgba(0, 58, 112, 0.2);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .answer-text th {
+            background: rgba(0, 58, 112, 0.15);
+            padding: 0.8rem;
+            text-align: left;
+            font-family: "Space Mono", monospace;
+            color: var(--nasa-blue);
+            font-weight: 700;
+            border-bottom: 2px solid rgba(0, 58, 112, 0.3);
+        }
+
+        .answer-text td {
+            padding: 0.8rem;
+            border-bottom: 1px solid rgba(0, 58, 112, 0.1);
+        }
+
+        .answer-text tr:last-child td {
+            border-bottom: none;
         }
 
         .code-snippet {
@@ -374,6 +508,47 @@
         .line-range {
             color: var(--accent-gold);
             font-weight: 600;
+        }
+
+        .relevance-badge {
+            font-size: 0.75rem;
+            padding: 0.2rem 0.6rem;
+            border-radius: 3px;
+            font-weight: 600;
+            margin-left: 0.75rem;
+            white-space: nowrap;
+        }
+
+        .relevance-high {
+            background: rgba(76, 175, 80, 0.25);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.4);
+        }
+
+        .relevance-medium {
+            background: rgba(255, 184, 28, 0.2);
+            color: var(--accent-gold);
+            border: 1px solid rgba(255, 184, 28, 0.4);
+        }
+
+        .relevance-low {
+            background: rgba(211, 47, 47, 0.2);
+            color: #ef5350;
+            border: 1px solid rgba(211, 47, 47, 0.4);
+        }
+
+        .low-relevance-warning {
+            padding: 0.5rem 1rem;
+            background: rgba(211, 47, 47, 0.08);
+            color: #ef5350;
+            font-size: 0.8rem;
+            font-family: "IBM Plex Mono", monospace;
+            border-bottom: 1px solid rgba(211, 47, 47, 0.2);
+        }
+
+        .code-snippet.is-low-relevance {
+            border-left-color: #ef5350;
+            background: rgba(211, 47, 47, 0.04);
         }
 
         .code-snippet pre {
@@ -633,12 +808,19 @@
 
                     <div v-if="results" class="llm-answer">
                         <h3>Mission Analysis</h3>
-                        <div class="answer-text">{{ results.answer }}</div>
+                        <div class="answer-text" v-html="renderMarkdown(results.answer)"></div>
 
-                        <div v-for="(chunk, idx) in results.chunks" :key="idx" class="code-snippet">
+                        <div v-for="(chunk, idx) in results.chunks" :key="idx"
+                             :class="['code-snippet', { 'is-low-relevance': getRelevance(chunk.score).level === 'low' }]">
                             <div class="snippet-header">
                                 <span class="file-path">📁 {{ chunk.file_path }}</span>
+                                <span :class="['relevance-badge', 'relevance-' + getRelevance(chunk.score).level]">
+                                    {{ getRelevance(chunk.score).label }} ({{ chunk.score.toFixed(3) }})
+                                </span>
                                 <span class="line-range">Lines {{ chunk.line_start }}–{{ chunk.line_end }}</span>
+                            </div>
+                            <div v-if="getRelevance(chunk.score).level === 'low'" class="low-relevance-warning">
+                                ⚠ Low relevance — this result may not be related to your query
                             </div>
                             <pre><code class="language-fortran">{{ chunk.text }}</code></pre>
                         </div>
@@ -676,6 +858,22 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script>
         const { createApp } = Vue;
+
+        // Configure marked for rich markdown rendering
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            headerIds: true,
+            mangle: false
+        });
+
+        // Custom renderer for code blocks with syntax highlighting
+        const renderer = new marked.Renderer();
+        renderer.code = (code) => {
+            const highlighted = hljs.highlightAuto(code.text).value;
+            return `<pre><code class="hljs language-${code.lang || 'plaintext'}">${highlighted}</code></pre>`;
+        };
+        marked.setOptions({ renderer });
 
         createApp({
             data() {
@@ -725,6 +923,23 @@
                 }
             },
             methods: {
+                renderMarkdown(text) {
+                    if (!text) return '';
+                    const html = marked(text);
+                    // Sanitize: allow common HTML tags but strip scripts
+                    const div = document.createElement('div');
+                    div.innerHTML = html;
+                    return html;
+                },
+
+                getRelevance(score) {
+                    // ChromaDB cosine distance: 0 = identical, 2 = opposite
+                    // Lower is better
+                    if (score < 0.9) return { level: 'high', label: 'High' };
+                    if (score < 1.1) return { level: 'medium', label: 'Medium' };
+                    return { level: 'low', label: 'Low' };
+                },
+
                 async performSearch() {
                     if (!this.searchInput.trim()) {
                         this.error = 'Please enter a query.';
