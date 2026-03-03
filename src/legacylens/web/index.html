@@ -998,11 +998,22 @@
             methods: {
                 renderMarkdown(text) {
                     if (!text) return '';
-                    const html = marked(text);
-                    // Sanitize: allow common HTML tags but strip scripts
-                    const div = document.createElement('div');
-                    div.innerHTML = html;
-                    return html;
+
+                    // Safety check: if marked isn't loaded yet, return escaped text
+                    if (typeof marked === 'undefined') {
+                        return text.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    }
+
+                    try {
+                        const html = marked(text);
+                        // Sanitize: allow common HTML tags but strip scripts
+                        const div = document.createElement('div');
+                        div.innerHTML = html;
+                        return html;
+                    } catch (err) {
+                        console.error('Error rendering markdown:', err);
+                        return text;
+                    }
                 },
 
                 async loadIndexStatus() {
