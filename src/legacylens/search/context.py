@@ -1,15 +1,6 @@
 """Context assembly for LLM answer generation."""
 
-SYSTEM_PROMPT = """You are a FORTRAN code expert analyzing the NASA NASTRAN-95 codebase.
-NASTRAN-95 is a structural analysis program written in fixed-form FORTRAN 77 with over 1 million lines of code.
-
-When answering questions:
-- Always cite specific file paths and line numbers from the provided context
-- Explain FORTRAN-specific constructs (COMMON blocks, ENTRY statements, fixed-form conventions)
-- Note shared state via COMMON blocks when relevant
-- Reference the call relationships between subroutines when applicable
-- Be precise about what the code does vs. what you're inferring
-- If the retrieved code context is not relevant to the question, say so honestly rather than fabricating an answer. Suggest what kind of question would work better."""
+SYSTEM_PROMPT = """You analyze NASA NASTRAN-95 (FORTRAN 77). Be concise. Cite file:line references. If context is irrelevant, say so."""
 
 
 def assemble_context(results: list[dict], indices: dict | None = None) -> str:
@@ -22,9 +13,13 @@ def assemble_context(results: list[dict], indices: dict | None = None) -> str:
     Returns:
         Formatted context string for LLM prompt
     """
+    MAX_CONTEXT_CHARS = 3000  # Cap total context to limit prompt tokens
     parts = [SYSTEM_PROMPT, "\n--- Retrieved Code Context ---\n"]
+    char_count = len(SYSTEM_PROMPT) + 40
 
     for i, result in enumerate(results, 1):
+        if char_count > MAX_CONTEXT_CHARS:
+            break
         meta = result["metadata"]
         header = (
             f"\n### Chunk {i}: {meta.get('unit_type', '').upper()} {meta.get('unit_name', 'UNKNOWN')}\n"
@@ -53,6 +48,13 @@ def assemble_context(results: list[dict], indices: dict | None = None) -> str:
             header += f"Cross-references: {index_ctx}\n"
 
         parts.append(header)
-        parts.append(f"```fortran\n{result['text']}\n```\n")
+        # Truncate very long chunks to reduce prompt tokens and LLM latency
+        text = result['text']
+        lines = text.split('\n')
+        if len(lines) > 25:
+            text = '\n'.join(lines[:25]) + '\n... (truncated)'
+        chunk_str = f"```fortran\n{text}\n```\n"
+        parts.append(chunk_str)
+        char_count += len(header) + len(chunk_str)
 
     return "\n".join(parts)

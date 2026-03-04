@@ -5,6 +5,7 @@ Exposes CLI functionality as HTTP endpoints for the web UI.
 
 import json
 import logging
+from functools import lru_cache
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -102,6 +103,18 @@ async def get_index_status():
         raise HTTPException(status_code=500, detail=f"Failed to read index status: {e}")
 
 
+@lru_cache(maxsize=128)
+def _cached_ask(question: str, top_k: int) -> tuple:
+    """Cache full RAG pipeline results."""
+    results = retrieve(question, top_k=top_k)
+    if not results:
+        return "No relevant code found. The index may be empty.", []
+    context = assemble_context(results)
+    answer = generate_answer(question, context)
+    chunks = _build_chunks(results)
+    return answer, chunks
+
+
 @app.post("/api/ask", response_model=QueryResponse)
 async def ask_question(request: QueryRequest):
     """Answer a natural language question about the NASTRAN-95 codebase."""
@@ -109,15 +122,7 @@ async def ask_question(request: QueryRequest):
         raise HTTPException(status_code=400, detail="Question cannot be empty")
 
     try:
-        results = retrieve(request.question, top_k=request.top_k)
-
-        if not results:
-            return QueryResponse(answer="No relevant code found. The index may be empty.", chunks=[])
-
-        context = assemble_context(results)
-        answer = generate_answer(request.question, context)
-
-        chunks = _build_chunks(results)
+        answer, chunks = _cached_ask(request.question.strip(), request.top_k)
         return QueryResponse(answer=answer, chunks=chunks)
 
     except Exception as e:
