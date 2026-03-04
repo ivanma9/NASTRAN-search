@@ -742,20 +742,22 @@
                                 <span :class="['relevance-badge', 'relevance-' + getRelevance(chunk.score).level]">
                                     {{ getRelevance(chunk.score).label }}
                                 </span>
-                                <button class="action-btn explain-btn"
-                                        @click.stop="explainSnippet(idx)"
-                                        :disabled="explainLoading[idx]">
-                                    {{ explainLoading[idx] ? '⏳ Explaining...' : '💡 Explain' }}
-                                </button>
-                                <button class="action-btn callers-btn"
-                                        @click.stop="scrollToCallers"
-                                        title="Scroll to callers">
-                                    👥 Callers
-                                </button>
                                 <a class="copy-btn" :href="getFileUrl(chunk)" target="_blank" rel="noopener" @click.stop title="View on GitHub">View File</a>
                                 <button class="copy-btn" :class="{ copied: copiedIdx === idx }" @click.stop="copyCode(chunk.text, idx)">
                                     {{ copiedIdx === idx ? '&#10003; Copied' : 'Copy' }}
                                 </button>
+                                <div class="snippet-actions">
+                                    <button class="action-btn explain-btn"
+                                            @click.stop="explainSnippet(idx)"
+                                            :disabled="explainLoading[idx]">
+                                        {{ explainLoading[idx] ? '⏳ Explaining...' : '💡 Explain' }}
+                                    </button>
+                                    <button class="action-btn callers-btn"
+                                            @click.stop="scrollToCallers"
+                                            title="Scroll to callers">
+                                        👥 Callers
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div v-if="getRelevance(chunk.score).level === 'low'" class="low-relevance-warning">
