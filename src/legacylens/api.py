@@ -15,6 +15,8 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from legacylens.config import get_settings
+from legacylens.index.call_graph import load_index as load_call_graph, get_callers, get_callees
+from legacylens.index.common_blocks import find_shared_state, load_index as load_common_blocks
 from legacylens.search.context import assemble_context
 from legacylens.search.generator import generate_answer, generate_answer_stream, _get_openai_client
 from legacylens.search.retriever import retrieve
@@ -69,6 +71,47 @@ class IndexStatus(BaseModel):
     unit_types: list[str] = []
     common_blocks: int = 0
     call_graph_nodes: int = 0
+
+
+class DependencyResponse(BaseModel):
+    unit_name: str
+    calls: list[str] = []
+    called_by: list[str] = []
+    common_blocks: list[str] = []
+    file: str = ""
+    line: int = 0
+
+
+class ImpactUnit(BaseModel):
+    name: str
+    file: str = ""
+    line: int = 0
+    depth: int = 0
+
+
+class ImpactResponse(BaseModel):
+    unit_name: str
+    affected: list[ImpactUnit] = []
+    total_affected: int = 0
+
+
+class DocumentRequest(BaseModel):
+    code: str
+    unit_name: str = ""
+
+
+class DocumentResponse(BaseModel):
+    documentation: str
+
+
+class TranslateRequest(BaseModel):
+    code: str
+    file_path: str
+    unit_name: str = ""
+
+
+class TranslateResponse(BaseModel):
+    translation: str
 
 
 @app.get("/api/status", response_model=IndexStatus)
@@ -203,6 +246,140 @@ Explanation:"""
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Explanation failed: {e}")
+
+
+@app.get("/api/dependencies/{unit_name}", response_model=DependencyResponse)
+async def get_dependencies(unit_name: str):
+    """Get call graph dependencies and shared state for a program unit."""
+    try:
+        graph = load_call_graph()
+        calls = get_callees(unit_name, graph)
+        called_by = get_callers(unit_name, graph)
+        common = find_shared_state(unit_name)
+
+        node = graph.get(unit_name, {})
+        return DependencyResponse(
+            unit_name=unit_name,
+            calls=calls,
+            called_by=called_by,
+            common_blocks=common,
+            file=node.get("file", ""),
+            line=node.get("line", 0),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Dependency lookup failed: {e}")
+
+
+@app.get("/api/impact/{unit_name}", response_model=ImpactResponse)
+async def get_impact(unit_name: str, depth: int = 3):
+    """BFS over called_by edges to find all units affected by changes to unit_name."""
+    try:
+        graph = load_call_graph()
+        visited = {}
+        queue = [(unit_name, 0)]
+
+        while queue:
+            current, d = queue.pop(0)
+            if current in visited or d > depth:
+                continue
+            visited[current] = d
+            for caller in get_callers(current, graph):
+                if caller not in visited:
+                    queue.append((caller, d + 1))
+
+        affected = []
+        for name, d in visited.items():
+            if name == unit_name:
+                continue
+            node = graph.get(name, {})
+            affected.append(ImpactUnit(
+                name=name,
+                file=node.get("file", ""),
+                line=node.get("line", 0),
+                depth=d,
+            ))
+        affected.sort(key=lambda u: (u.depth, u.name))
+
+        return ImpactResponse(
+            unit_name=unit_name,
+            affected=affected,
+            total_affected=len(affected),
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Impact analysis failed: {e}")
+
+
+@app.post("/api/document", response_model=DocumentResponse)
+async def document_code(request: DocumentRequest):
+    """Generate documentation for a code snippet using LLM."""
+    if not request.code or not request.code.strip():
+        raise HTTPException(status_code=400, detail="Code cannot be empty")
+
+    try:
+        settings = get_settings()
+        client = _get_openai_client()
+
+        prompt = f"""Generate concise technical documentation for this FORTRAN subroutine/function.
+Include: Purpose, Parameters (if any), Key Operations, and Return Value (if applicable).
+Use markdown formatting.
+
+Unit name: {request.unit_name or 'Unknown'}
+
+Code:
+{request.code}
+
+Documentation:"""
+
+        response = client.chat.completions.create(
+            model=settings.llm_model,
+            max_tokens=300,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1,
+        )
+
+        documentation = response.choices[0].message.content or ""
+        return DocumentResponse(documentation=documentation.strip())
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Documentation generation failed: {e}")
+
+
+@app.post("/api/translate", response_model=TranslateResponse)
+async def translate_code(request: TranslateRequest):
+    """Translate FORTRAN code to idiomatic Python equivalent."""
+    if not request.code or not request.code.strip():
+        raise HTTPException(status_code=400, detail="Code cannot be empty")
+
+    try:
+        settings = get_settings()
+        client = _get_openai_client()
+
+        prompt = f"""Translate this FORTRAN code into idiomatic Python. Provide:
+1. The Python equivalent using modern libraries (NumPy/SciPy where appropriate)
+2. Brief inline comments noting key differences from the FORTRAN original
+
+Keep the translation concise and practical. Use markdown with a python code block.
+
+File: {request.file_path}
+Unit: {request.unit_name or 'Unknown'}
+
+FORTRAN code:
+{request.code}
+
+Python translation:"""
+
+        response = client.chat.completions.create(
+            model=settings.llm_model,
+            max_tokens=400,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1,
+        )
+
+        translation = response.choices[0].message.content or ""
+        return TranslateResponse(translation=translation.strip())
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Translation failed: {e}")
 
 
 def _build_chunks(results: list[dict]) -> list[ChunkResponse]:

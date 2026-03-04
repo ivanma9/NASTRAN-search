@@ -869,6 +869,11 @@
                                             :disabled="docLoading[idx]">
                                         {{ docLoading[idx] ? '...' : 'Docs' }}
                                     </button>
+                                    <button class="action-btn" :class="{ active: translations[idx] }"
+                                            @click.stop="translateSnippet(idx)"
+                                            :disabled="translateLoading[idx]">
+                                        {{ translateLoading[idx] ? '...' : 'Translate' }}
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -934,6 +939,12 @@
                             <h4>Generated Documentation</h4>
                             <div class="doc-content" v-html="renderMarkdown(docs[idx])"></div>
                         </div>
+
+                        <!-- Translation Panel -->
+                        <div v-if="translations[idx]" class="feature-panel">
+                            <h4>Python Translation</h4>
+                            <div class="doc-content" v-html="renderMarkdown(translations[idx])"></div>
+                        </div>
                     </div>
 
                 </div>
@@ -966,6 +977,8 @@
                     impactLoading: {},
                     docs: {},
                     docLoading: {},
+                    translations: {},
+                    translateLoading: {},
                     indexStatus: { files: 0, chunks: 0, updated: '' },
                     apiBase: '/api',
                     currentFact: '',
@@ -1301,6 +1314,40 @@
                         this.docs[index] = `Error: ${err.message}`;
                     } finally {
                         this.docLoading[index] = false;
+                        this.$forceUpdate();
+                    }
+                },
+
+                async translateSnippet(index) {
+                    const chunk = this.results.chunks[index];
+                    if (!chunk) return;
+
+                    if (this.translations[index]) {
+                        this.translations[index] = null;
+                        this.$forceUpdate();
+                        return;
+                    }
+
+                    this.translateLoading[index] = true;
+                    this.$forceUpdate();
+
+                    try {
+                        const response = await fetch(`${this.apiBase}/translate`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                code: chunk.text,
+                                file_path: chunk.file_path,
+                                unit_name: chunk.unit_name || ''
+                            })
+                        });
+                        if (!response.ok) throw new Error(response.statusText);
+                        const data = await response.json();
+                        this.translations[index] = data.translation;
+                    } catch (err) {
+                        this.translations[index] = `Error: ${err.message}`;
+                    } finally {
+                        this.translateLoading[index] = false;
                         this.$forceUpdate();
                     }
                 },
