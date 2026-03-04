@@ -1068,6 +1068,24 @@
                     }
                 },
 
+                scrollToCallers() {
+                    // Find the related-functions section
+                    const section = document.querySelector('.related-functions');
+                    if (section) {
+                        // Scroll to the section
+                        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                        // Find and highlight the "Called By" subsection
+                        const calledByDiv = section.querySelector('.dependency-group:nth-child(2)');
+                        if (calledByDiv) {
+                            calledByDiv.style.backgroundColor = 'rgba(255, 184, 28, 0.1)';
+                            setTimeout(() => {
+                                calledByDiv.style.backgroundColor = '';
+                            }, 2000);
+                        }
+                    }
+                },
+
                 selectFromHistory(query) {
                     this.searchInput = query;
                     document.getElementById('search-input').value = query;
