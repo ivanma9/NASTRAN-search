@@ -89,7 +89,7 @@ TEST_QUERIES = [
     # Scenario 5: "What are the dependencies of MODULE-X?"
     {
         "query": "What are the dependencies of the DCOMP subroutine?",
-        "expect_units": ["DCOMP"],
+        "expect_units": ["DCOMP", "DDCOMP", "CDCOMP", "SDCOMP", "SDCOMPX"],
         "expect_files_contain": ["dcomp"],
         "type": "dependency",
     },

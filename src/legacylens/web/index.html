@@ -301,6 +301,17 @@
             font-weight: 700;
             padding-bottom: 0.8rem;
             border-bottom: 1px solid rgba(0, 58, 112, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .duration {
+            font-size: 0.7rem;
+            color: var(--text-light);
+            font-weight: 400;
+            letter-spacing: 0;
+            text-transform: none;
         }
 
         .answer-text {
@@ -527,11 +538,12 @@
             text-align: right;
             min-width: 3rem;
             font-family: "IBM Plex Mono", monospace;
-            font-size: 0.75rem;
+            font-size: 0.85rem;
             line-height: 1.6;
             color: rgba(255, 255, 255, 0.35);
             user-select: none;
             pointer-events: none;
+            white-space: pre;
         }
 
         .expand-code-btn {
@@ -699,7 +711,7 @@
 
                     <!-- Answer -->
                     <div v-if="results" class="answer-card">
-                        <h3>Answer</h3>
+                        <h3>Answer <span v-if="searchDuration" class="duration">{{ searchDuration }}s</span></h3>
                         <div class="answer-text" v-html="renderMarkdown(results.answer)"></div>
                     </div>
 
@@ -785,6 +797,7 @@
                     searchInput: '',
                     results: null,
                     loading: false,
+                    searchDuration: null,
                     error: null,
                     showDependencies: false,
                     showHistory: false,
@@ -947,6 +960,8 @@
                     this.currentQuery = this.searchInput;
                     this.results = { answer: '', chunks: [] };
                     this.expandedSnippets = {};
+                    this.searchDuration = null;
+                    const startTime = performance.now();
                     this.startLoadingFacts();
 
                     try {
@@ -1004,6 +1019,7 @@
                         this.results = null;
                     } finally {
                         this.loading = false;
+                        this.searchDuration = ((performance.now() - startTime) / 1000).toFixed(1);
                         this.stopLoadingFacts();
                     }
                 },

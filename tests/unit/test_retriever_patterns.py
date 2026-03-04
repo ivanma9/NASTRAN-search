@@ -11,6 +11,7 @@ from legacylens.search.retriever import (
     COMMON_BLOCK_RE,
     UNIT_NAME_RE,
     _extract_unit_name,
+    _keyword_rerank,
 )
 
 
@@ -256,6 +257,59 @@ class TestIndexAugmentation:
 
     @patch("legacylens.search.retriever.load_common_index")
     @patch("legacylens.search.retriever.load_call_graph")
+    def test_augment_injects_direct_chunk(self, mock_cg, mock_ci):
+        """When a unit name is found and not in results, inject it from ChromaDB."""
+        from legacylens.search.retriever import _augment_with_indices
+        from unittest.mock import MagicMock
+
+        mock_ci.return_value = {}
+        mock_cg.return_value = {
+            "DCOMP": {"calls": ["MESAGE"], "called_by": ["SOLVER"]}
+        }
+
+        # Mock ChromaDB collection
+        mock_collection = MagicMock()
+        mock_collection.get.return_value = {
+            "ids": ["chunk_dcomp"],
+            "documents": ["SUBROUTINE DCOMP(A,B,C)\n  CALL MESAGE\nEND"],
+            "metadatas": [{"unit_name": "DCOMP", "file_path": "dcomp.f",
+                           "line_start": 1, "line_end": 3}],
+        }
+
+        results = [self._make_result(unit_name="OTHER")]
+        _augment_with_indices("What does DCOMP depend on?", results, collection=mock_collection)
+
+        # DCOMP chunk should be prepended
+        assert results[0]["metadata"]["unit_name"] == "DCOMP"
+        assert results[0]["score"] == 0.0
+
+    @patch("legacylens.search.retriever.load_common_index")
+    @patch("legacylens.search.retriever.load_call_graph")
+    def test_augment_no_duplicate_injection(self, mock_cg, mock_ci):
+        """If the unit is already in results, don't inject a duplicate of it."""
+        from legacylens.search.retriever import _augment_with_indices
+        from unittest.mock import MagicMock
+
+        mock_ci.return_value = {}
+        mock_cg.return_value = {
+            "DCOMP": {"calls": ["MESAGE"], "called_by": ["SOLVER"]}
+        }
+
+        mock_collection = MagicMock()
+        mock_collection.get.return_value = {"ids": [], "documents": [], "metadatas": []}
+
+        # DCOMP is already present; it should not be fetched again, but
+        # neighbors (MESAGE, SOLVER) may still be injected
+        results = [self._make_result(unit_name="DCOMP")]
+        _augment_with_indices("What does subroutine DCOMP do?", results, collection=mock_collection)
+
+        # DCOMP itself should NOT have been queried (already present)
+        queried_units = [call.kwargs.get("where", {}).get("unit_name")
+                        for call in mock_collection.get.call_args_list]
+        assert "DCOMP" not in queried_units
+
+    @patch("legacylens.search.retriever.load_common_index")
+    @patch("legacylens.search.retriever.load_call_graph")
     def test_augment_conceptual_query_no_crash(self, mock_cg, mock_ci):
         """Conceptual queries with no specific matches should not crash."""
         from legacylens.search.retriever import _augment_with_indices
@@ -268,3 +322,60 @@ class TestIndexAugmentation:
 
         # Should not add any index context for conceptual queries
         assert results[0]["index_context"] == ""
+
+
+# ---------------------------------------------------------------------------
+# Keyword re-ranking tests
+# ---------------------------------------------------------------------------
+class TestKeywordReranking:
+    """Test that keyword re-ranking boosts relevant results."""
+
+    def _make_result(self, text, score):
+        return {
+            "text": text,
+            "metadata": {"unit_name": "TEST", "file_path": "test.f"},
+            "score": score,
+            "index_context": "",
+        }
+
+    def test_io_query_boosts_io_chunks(self):
+        """I/O-related chunks should get a score bonus for I/O queries."""
+        results = [
+            self._make_result("CALL SOLVER(A,B)", 0.8),
+            self._make_result("READ(5,100) X\nWRITE(6,200) Y\nOPEN(UNIT=10)", 0.9),
+        ]
+        _keyword_rerank("Find all file I/O operations", results)
+
+        # The I/O chunk (originally worse) should now rank better
+        assert results[0]["text"].startswith("READ")
+
+    def test_no_keywords_no_change(self):
+        """Queries without relevant keywords should not alter scores."""
+        results = [
+            self._make_result("CALL SOLVER(A,B)", 0.5),
+            self._make_result("CALL DECOMP(X,Y)", 0.6),
+        ]
+        _keyword_rerank("What is the main entry point?", results)
+
+        assert results[0]["score"] == 0.5
+        assert results[1]["score"] == 0.6
+
+    def test_bonus_is_capped(self):
+        """Keyword bonus should not exceed the maximum cap."""
+        # A chunk with many I/O keywords
+        text = " ".join(["READ WRITE OPEN CLOSE REWIND"] * 10)
+        results = [self._make_result(text, 1.0)]
+        _keyword_rerank("Find all file I/O operations", results)
+
+        # Score should be reduced by at most _MAX_KEYWORD_BONUS (0.35)
+        assert results[0]["score"] >= 1.0 - 0.35 - 0.001
+
+    def test_error_keywords_boost(self):
+        """Error-related queries should boost error chunks."""
+        results = [
+            self._make_result("CALL SOLVER(A,B)", 0.7),
+            self._make_result("CALL MESAGE(FATAL,ERROR)\nIF(IERR) ABORT", 0.8),
+        ]
+        _keyword_rerank("Show me error handling patterns", results)
+
+        assert results[0]["text"].startswith("CALL MESAGE")

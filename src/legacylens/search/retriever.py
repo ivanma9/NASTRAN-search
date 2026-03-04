@@ -115,11 +115,13 @@ def retrieve(query: str, top_k: int | None = None) -> list[dict]:
     query_embedding = response.embeddings[0]
 
     # ChromaDB search (cached collection)
+    # Overfetch to give re-ranking and injection more candidates to work with
     collection = _get_chroma_collection()
+    fetch_k = k + 5
 
     results = collection.query(
         query_embeddings=[query_embedding],
-        n_results=k,
+        n_results=fetch_k,
     )
 
     # Build result list
@@ -141,13 +143,60 @@ def retrieve(query: str, top_k: int | None = None) -> list[dict]:
             "index_context": "",
         })
 
-    # Index-augmented retrieval
-    _augment_with_indices(query, retrieved)
+    # Keyword re-ranking: boost results that contain query-relevant terms
+    _keyword_rerank(query, retrieved)
 
-    return retrieved
+    # Index-augmented retrieval (includes direct chunk injection)
+    _augment_with_indices(query, retrieved, collection)
+
+    # Trim back to requested top_k after re-ranking and injection
+    return retrieved[:k]
 
 
-def _augment_with_indices(query: str, results: list[dict]) -> None:
+# Keywords that signal specific coding concepts in Fortran queries
+_IO_KEYWORDS = re.compile(
+    r"\b(READ|WRITE|OPEN|CLOSE|REWIND|BACKSPACE|ENDFILE|INQUIRE|FORMAT|"
+    r"FILE|I/?O|INPUT|OUTPUT|PRINT|PUNCH|TAPE|UNIT)\b",
+    re.IGNORECASE,
+)
+_ERROR_KEYWORDS = re.compile(
+    r"\b(ERROR|FATAL|DIAG|MESAGE|ABORT|WARNING|FAIL)\b",
+    re.IGNORECASE,
+)
+_KEYWORD_PATTERNS = [_IO_KEYWORDS, _ERROR_KEYWORDS]
+
+# Bonus per keyword match (subtracted from distance; lower = better)
+_KEYWORD_BONUS = 0.08
+_MAX_KEYWORD_BONUS = 0.35
+
+
+def _keyword_rerank(query: str, results: list[dict]) -> None:
+    """Apply keyword-based re-ranking bonus to results.
+
+    For conceptual queries (I/O, error handling), results containing relevant
+    keywords get a distance bonus, then results are re-sorted.
+    """
+    # Collect keywords present in the query
+    query_keywords: list[re.Pattern] = []
+    for pattern in _KEYWORD_PATTERNS:
+        if pattern.search(query):
+            query_keywords.append(pattern)
+
+    if not query_keywords:
+        return
+
+    for r in results:
+        text = r["text"].upper()
+        match_count = 0
+        for pattern in query_keywords:
+            match_count += len(pattern.findall(text))
+        bonus = min(match_count * _KEYWORD_BONUS, _MAX_KEYWORD_BONUS)
+        r["score"] = max(r["score"] - bonus, 0.0)
+
+    results.sort(key=lambda r: r["score"])
+
+
+def _augment_with_indices(query: str, results: list[dict], collection=None) -> None:
     """Augment results with cross-reference index data."""
     try:
         common_index = load_common_index()
@@ -178,6 +227,50 @@ def _augment_with_indices(query: str, results: list[dict]) -> None:
             if call_graph and candidate in call_graph:
                 unit_name = candidate
                 break
+
+    # Fix 1: Direct chunk injection — if we know the unit name, fetch its chunk
+    # directly from ChromaDB and prepend it if not already in results.
+    # If the exact unit doesn't exist, try partial matches from the call graph.
+    if unit_name and collection is not None:
+        existing_units = {r["metadata"].get("unit_name") for r in results}
+        inject_targets = [unit_name]
+
+        # If exact unit isn't in call graph, look for partial matches
+        if call_graph and unit_name not in call_graph:
+            for key in call_graph:
+                if unit_name in key and key != unit_name:
+                    inject_targets.append(key)
+                    if len(inject_targets) >= 3:
+                        break
+
+        injected = 0
+        for target in inject_targets:
+            if target in existing_units:
+                continue
+            try:
+                direct = collection.get(
+                    where={"unit_name": target},
+                    limit=1,
+                    include=["documents", "metadatas"],
+                )
+                if direct["ids"]:
+                    meta = direct["metadatas"][0]
+                    for field in ("common_blocks", "calls", "entry_points", "includes", "externals"):
+                        if field in meta and isinstance(meta[field], str):
+                            try:
+                                meta[field] = json.loads(meta[field])
+                            except (json.JSONDecodeError, TypeError):
+                                pass
+                    results.insert(injected, {
+                        "text": direct["documents"][0],
+                        "metadata": meta,
+                        "score": 0.0,
+                        "index_context": "",
+                    })
+                    existing_units.add(target)
+                    injected += 1
+            except Exception:
+                pass
 
     if unit_name and call_graph:
         entry = call_graph.get(unit_name, {})
