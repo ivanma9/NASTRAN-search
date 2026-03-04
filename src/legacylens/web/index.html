@@ -814,6 +814,8 @@
                     queryHistory: [],
                     expandedSnippets: {},
                     copiedIdx: null,
+                    explainLoading: {},
+                    explanations: {},
                     indexStatus: { files: 0, chunks: 0, updated: '' },
                     apiBase: '/api',
                     currentFact: '',
@@ -1031,6 +1033,38 @@
                         this.loading = false;
                         this.searchDuration = ((performance.now() - startTime) / 1000).toFixed(1);
                         this.stopLoadingFacts();
+                    }
+                },
+
+                async explainSnippet(index) {
+                    const chunk = this.results.chunks[index];
+                    if (!chunk) return;
+
+                    this.explainLoading[index] = true;
+                    this.$forceUpdate(); // Force Vue to update UI
+
+                    try {
+                        const response = await fetch(`${this.apiBase}/explain`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                code: chunk.text,
+                                file_path: chunk.file_path,
+                                function_name: chunk.text.split('\n')[0] // First line often has function name
+                            })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`API error: ${response.statusText}`);
+                        }
+
+                        const data = await response.json();
+                        this.explanations[index] = data.explanation;
+                    } catch (err) {
+                        this.explanations[index] = `Error: ${err.message || 'Failed to generate explanation'}`;
+                    } finally {
+                        this.explainLoading[index] = false;
+                        this.$forceUpdate();
                     }
                 },
 
