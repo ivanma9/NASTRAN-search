@@ -16,8 +16,9 @@ from pydantic import BaseModel
 
 from legacylens.config import get_settings
 from legacylens.search.context import assemble_context
-from legacylens.search.generator import generate_answer, generate_answer_stream
+from legacylens.search.generator import generate_answer, generate_answer_stream, _get_openai_client
 from legacylens.search.retriever import retrieve
+from typing import Optional
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
@@ -40,6 +41,12 @@ app.add_middleware(
 class QueryRequest(BaseModel):
     question: str
     top_k: int = 5
+
+
+class ExplainRequest(BaseModel):
+    code: str
+    file_path: str
+    function_name: Optional[str] = None
 
 
 class ChunkResponse(BaseModel):
@@ -159,6 +166,43 @@ async def ask_question_stream(request: QueryRequest):
         yield "event: done\ndata: {}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+@app.post("/api/explain")
+async def explain_code(request: ExplainRequest):
+    """Generate a plain-English explanation of code using LLM."""
+    if not request.code or not request.code.strip():
+        raise HTTPException(status_code=400, detail="Code cannot be empty")
+
+    try:
+        settings = get_settings()
+        client = _get_openai_client()
+
+        # Build the prompt
+        prompt = f"""Explain what this FORTRAN code does in 2-3 sentences. Be concise and focus on the main purpose.
+
+File: {request.file_path}"""
+        if request.function_name:
+            prompt += f"\nFunction: {request.function_name}"
+        prompt += f"""
+
+Code:
+{request.code}
+
+Explanation:"""
+
+        response = client.chat.completions.create(
+            model=settings.llm_model,
+            max_tokens=150,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1,
+        )
+
+        explanation = response.choices[0].message.content or ""
+        return {"explanation": explanation.strip()}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Explanation failed: {e}")
 
 
 def _build_chunks(results: list[dict]) -> list[ChunkResponse]:

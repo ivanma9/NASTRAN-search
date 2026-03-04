@@ -485,8 +485,6 @@
             border-color: var(--accent-gold);
         }
 
-        a.copy-btn { text-decoration: none; }
-
         .copy-btn.copied {
             background: rgba(76, 175, 80, 0.3);
             border-color: #81c784;
@@ -562,59 +560,6 @@
         }
 
         .expand-code-btn:hover { background: rgba(0, 58, 112, 0.15); }
-
-        .snippet-actions {
-            display: flex;
-            gap: 0.75rem;
-            margin-left: auto;
-        }
-
-        .action-btn {
-            background: transparent;
-            border: 2px solid var(--accent-gold);
-            color: var(--mission-white);
-            padding: 0.4rem 0.8rem;
-            border-radius: 4px;
-            font-family: "Space Mono", monospace;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            white-space: nowrap;
-        }
-
-        .action-btn:hover:not(:disabled) {
-            background: var(--accent-gold);
-            color: var(--nasa-blue);
-            box-shadow: 0 0 12px rgba(255, 184, 28, 0.3);
-        }
-
-        .action-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .explanation-box {
-            background: rgba(0, 58, 112, 0.15);
-            border-left: 4px solid var(--accent-gold);
-            border-radius: 4px;
-            padding: 1rem;
-            margin: 1rem 0;
-            color: var(--text-dark);
-            font-size: 0.95rem;
-            line-height: 1.6;
-        }
-
-        .explanation-box.loading {
-            color: var(--text-light);
-            font-style: italic;
-        }
-
-        .explanation-box.error {
-            background: rgba(211, 47, 47, 0.1);
-            border-left-color: var(--nasa-red);
-            color: var(--nasa-red);
-        }
 
         /* ── Dependencies ── */
         .related-functions {
@@ -795,7 +740,6 @@
                                 <span :class="['relevance-badge', 'relevance-' + getRelevance(chunk.score).level]">
                                     {{ getRelevance(chunk.score).label }}
                                 </span>
-                                <a class="copy-btn" :href="getFileUrl(chunk)" target="_blank" rel="noopener" @click.stop title="View on GitHub">View File</a>
                                 <button class="copy-btn" :class="{ copied: copiedIdx === idx }" @click.stop="copyCode(chunk.text, idx)">
                                     {{ copiedIdx === idx ? '&#10003; Copied' : 'Copy' }}
                                 </button>
@@ -805,9 +749,7 @@
                                             :disabled="explainLoading[idx]">
                                         {{ explainLoading[idx] ? '⏳ Explaining...' : '💡 Explain' }}
                                     </button>
-                                    <button class="action-btn callers-btn"
-                                            @click.stop="scrollToCallers"
-                                            title="Scroll to callers">
+                                    <button class="action-btn callers-btn" @click.stop="scrollToCallers">
                                         👥 Callers
                                     </button>
                                 </div>
@@ -819,12 +761,6 @@
                         <div :class="['snippet-code', expandedSnippets[idx] ? 'expanded' : 'collapsed']">
                             <div class="line-numbers">{{ generateLineNumbers(chunk.line_start, chunk.text) }}</div>
                             <pre><code class="language-fortran">{{ chunk.text }}</code></pre>
-                            <div v-if="explanations[idx]" class="explanation-box">
-                                <strong>💡 Explanation:</strong> {{ explanations[idx] }}
-                            </div>
-                            <div v-if="explainLoading[idx] && !explanations[idx]" class="explanation-box loading">
-                                ⏳ Generating explanation...
-                            </div>
                         </div>
                         <button v-if="!expandedSnippets[idx] && getLineCount(chunk.text) > 5"
                                 class="expand-code-btn" @click="toggleSnippet(idx)">
@@ -878,9 +814,10 @@
                     queryHistory: [],
                     expandedSnippets: {},
                     copiedIdx: null,
+                    explainLoading: {},
+                    explanations: {},
                     indexStatus: { files: 0, chunks: 0, updated: '' },
                     apiBase: '/api',
-                    repoBase: 'https://github.com/nasa/NASTRAN-95/blob/master/',
                     currentFact: '',
                     factInterval: null,
                     sampleQueries: [
@@ -904,9 +841,7 @@
                         'DCOMP performs matrix decomposition using Cholesky factorization',
                         'Modal analysis reveals how structures naturally want to vibrate and deform',
                         'FORTRAN 77 was the standard for scientific computing in the 1980s-2000s',
-                    ],
-                    explainLoading: {},
-                    explanations: {}
+                    ]
                 };
             },
             mounted() {
@@ -1098,6 +1033,56 @@
                         this.loading = false;
                         this.searchDuration = ((performance.now() - startTime) / 1000).toFixed(1);
                         this.stopLoadingFacts();
+                    }
+                },
+
+                async explainSnippet(index) {
+                    const chunk = this.results.chunks[index];
+                    if (!chunk) return;
+
+                    this.explainLoading[index] = true;
+                    this.$forceUpdate(); // Force Vue to update UI
+
+                    try {
+                        const response = await fetch(`${this.apiBase}/explain`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                code: chunk.text,
+                                file_path: chunk.file_path,
+                                function_name: chunk.text.split('\n')[0] // First line often has function name
+                            })
+                        });
+
+                        if (!response.ok) {
+                            throw new Error(`API error: ${response.statusText}`);
+                        }
+
+                        const data = await response.json();
+                        this.explanations[index] = data.explanation;
+                    } catch (err) {
+                        this.explanations[index] = `Error: ${err.message || 'Failed to generate explanation'}`;
+                    } finally {
+                        this.explainLoading[index] = false;
+                        this.$forceUpdate();
+                    }
+                },
+
+                scrollToCallers() {
+                    // Find the related-functions section
+                    const section = document.querySelector('.related-functions');
+                    if (section) {
+                        // Scroll to the section
+                        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                        // Find and highlight the "Called By" subsection
+                        const calledByDiv = section.querySelector('.dependency-group:nth-child(2)');
+                        if (calledByDiv) {
+                            calledByDiv.style.backgroundColor = 'rgba(255, 184, 28, 0.1)';
+                            setTimeout(() => {
+                                calledByDiv.style.backgroundColor = '';
+                            }, 2000);
+                        }
                     }
                 },
 
