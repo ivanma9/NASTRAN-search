@@ -819,6 +819,12 @@
                         <div :class="['snippet-code', expandedSnippets[idx] ? 'expanded' : 'collapsed']">
                             <div class="line-numbers">{{ generateLineNumbers(chunk.line_start, chunk.text) }}</div>
                             <pre><code class="language-fortran">{{ chunk.text }}</code></pre>
+                            <div v-if="explanations[idx]" class="explanation-box">
+                                <strong>💡 Explanation:</strong> {{ explanations[idx] }}
+                            </div>
+                            <div v-if="explainLoading[idx] && !explanations[idx]" class="explanation-box loading">
+                                ⏳ Generating explanation...
+                            </div>
                         </div>
                         <button v-if="!expandedSnippets[idx] && getLineCount(chunk.text) > 5"
                                 class="expand-code-btn" @click="toggleSnippet(idx)">
