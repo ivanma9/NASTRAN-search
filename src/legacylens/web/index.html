@@ -561,6 +561,119 @@
 
         .expand-code-btn:hover { background: rgba(0, 58, 112, 0.15); }
 
+        /* ── Snippet Action Buttons ── */
+        .snippet-actions {
+            display: flex;
+            gap: 0.3rem;
+        }
+
+        .action-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--mission-white);
+            padding: 0.2rem 0.5rem;
+            border-radius: 3px;
+            cursor: pointer;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.65rem;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: var(--accent-gold);
+        }
+
+        .action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .action-btn.active {
+            background: rgba(255, 184, 28, 0.3);
+            border-color: var(--accent-gold);
+        }
+
+        /* ── Feature Panels (below snippets) ── */
+        .feature-panel {
+            padding: 1rem 1.2rem;
+            background: #f8f9fa;
+            border-top: 2px solid var(--accent-gold);
+            font-size: 0.9rem;
+            line-height: 1.6;
+            animation: fade-in 0.3s ease-out;
+        }
+
+        .feature-panel h4 {
+            font-family: "Space Mono", monospace;
+            font-size: 0.7rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            color: var(--nasa-blue);
+            margin-bottom: 0.6rem;
+            font-weight: 700;
+        }
+
+        .dep-section { margin-bottom: 0.8rem; }
+
+        .dep-section-title {
+            font-family: "Space Mono", monospace;
+            font-size: 0.65rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.2rem;
+        }
+
+        .dep-list {
+            list-style: none;
+            padding-left: 0.5rem;
+        }
+
+        .dep-list li {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.85rem;
+            padding: 0.15rem 0;
+        }
+
+        .impact-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.2rem 0;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.85rem;
+        }
+
+        .impact-depth {
+            background: var(--nasa-blue);
+            color: white;
+            font-size: 0.6rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 2px;
+            font-weight: 700;
+            min-width: 1.5rem;
+            text-align: center;
+        }
+
+        .doc-content {
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+
+        .doc-content p { margin-bottom: 0.5rem; }
+        .doc-content code {
+            background: rgba(0, 58, 112, 0.1);
+            padding: 0.1rem 0.3rem;
+            border-radius: 2px;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.85em;
+        }
+
+        .no-data {
+            color: var(--text-light);
+            font-style: italic;
+            font-size: 0.85rem;
+        }
+
         /* ── Dependencies ── */
         .related-functions {
             margin-top: 1.5rem;
@@ -715,14 +828,6 @@
                         <div class="answer-text" v-html="renderMarkdown(results.answer)"></div>
                     </div>
 
-                    <!-- Options -->
-                    <div v-if="results && results.chunks && results.chunks.length" class="options-bar">
-                        <label>
-                            <input type="checkbox" v-model="showDependencies" />
-                            Show Dependencies
-                        </label>
-                    </div>
-
                     <!-- Sources -->
                     <div v-if="results && results.chunks && results.chunks.length" class="sources-divider">
                         Source Code ({{ results.chunks.length }} snippets)
@@ -744,13 +849,25 @@
                                     {{ copiedIdx === idx ? '&#10003; Copied' : 'Copy' }}
                                 </button>
                                 <div class="snippet-actions">
-                                    <button class="action-btn explain-btn"
+                                    <button class="action-btn" :class="{ active: explanations[idx] }"
                                             @click.stop="explainSnippet(idx)"
                                             :disabled="explainLoading[idx]">
-                                        {{ explainLoading[idx] ? '⏳ Explaining...' : '💡 Explain' }}
+                                        {{ explainLoading[idx] ? '...' : 'Explain' }}
                                     </button>
-                                    <button class="action-btn callers-btn" @click.stop="scrollToCallers">
-                                        👥 Callers
+                                    <button class="action-btn" :class="{ active: dependencies[idx] }"
+                                            @click.stop="fetchDependencies(idx)"
+                                            :disabled="depLoading[idx]">
+                                        {{ depLoading[idx] ? '...' : 'Deps' }}
+                                    </button>
+                                    <button class="action-btn" :class="{ active: impacts[idx] }"
+                                            @click.stop="fetchImpact(idx)"
+                                            :disabled="impactLoading[idx]">
+                                        {{ impactLoading[idx] ? '...' : 'Impact' }}
+                                    </button>
+                                    <button class="action-btn" :class="{ active: docs[idx] }"
+                                            @click.stop="documentSnippet(idx)"
+                                            :disabled="docLoading[idx]">
+                                        {{ docLoading[idx] ? '...' : 'Docs' }}
                                     </button>
                                 </div>
                             </div>
@@ -766,28 +883,56 @@
                                 class="expand-code-btn" @click="toggleSnippet(idx)">
                             Show all {{ getLineCount(chunk.text) }} lines
                         </button>
-                    </div>
 
-                    <!-- Dependencies -->
-                    <div v-if="results && showDependencies && results.related_functions" class="related-functions">
-                        <h3>Dependencies</h3>
-                        <div v-if="results.related_functions.calls" class="dependency-group">
-                            <div class="dependency-title">Calls</div>
-                            <ul class="dependency-list">
-                                <li v-for="fn in results.related_functions.calls" :key="fn">{{ fn }}</li>
-                            </ul>
+                        <!-- Explanation Panel -->
+                        <div v-if="explanations[idx]" class="feature-panel">
+                            <h4>Explanation</h4>
+                            <div v-html="renderMarkdown(explanations[idx])"></div>
                         </div>
-                        <div v-if="results.related_functions.called_by" class="dependency-group">
-                            <div class="dependency-title">Called By</div>
-                            <ul class="dependency-list">
-                                <li v-for="fn in results.related_functions.called_by" :key="fn">{{ fn }}</li>
-                            </ul>
+
+                        <!-- Dependencies Panel -->
+                        <div v-if="dependencies[idx]" class="feature-panel">
+                            <h4>Dependencies — {{ chunk.unit_name }}</h4>
+                            <div v-if="dependencies[idx].calls && dependencies[idx].calls.length" class="dep-section">
+                                <div class="dep-section-title">Calls</div>
+                                <ul class="dep-list">
+                                    <li v-for="fn in dependencies[idx].calls" :key="fn">&#9654; {{ fn }}</li>
+                                </ul>
+                            </div>
+                            <div v-if="dependencies[idx].called_by && dependencies[idx].called_by.length" class="dep-section">
+                                <div class="dep-section-title">Called By</div>
+                                <ul class="dep-list">
+                                    <li v-for="fn in dependencies[idx].called_by" :key="fn">&#9664; {{ fn }}</li>
+                                </ul>
+                            </div>
+                            <div v-if="dependencies[idx].common_blocks && dependencies[idx].common_blocks.length" class="dep-section">
+                                <div class="dep-section-title">Shared COMMON Blocks</div>
+                                <ul class="dep-list">
+                                    <li v-for="cb in dependencies[idx].common_blocks" :key="cb">&#9632; {{ cb }}</li>
+                                </ul>
+                            </div>
+                            <div v-if="!dependencies[idx].calls.length && !dependencies[idx].called_by.length && !dependencies[idx].common_blocks.length" class="no-data">
+                                No dependencies found in the call graph index.
+                            </div>
                         </div>
-                        <div v-if="results.related_functions.common_blocks" class="dependency-group">
-                            <div class="dependency-title">Common Blocks</div>
-                            <ul class="dependency-list">
-                                <li v-for="cb in results.related_functions.common_blocks" :key="cb">{{ cb }}</li>
-                            </ul>
+
+                        <!-- Impact Analysis Panel -->
+                        <div v-if="impacts[idx]" class="feature-panel">
+                            <h4>Impact Analysis — {{ chunk.unit_name }} ({{ impacts[idx].total_affected }} affected)</h4>
+                            <div v-if="impacts[idx].affected && impacts[idx].affected.length">
+                                <div v-for="unit in impacts[idx].affected" :key="unit.name" class="impact-item">
+                                    <span class="impact-depth">D{{ unit.depth }}</span>
+                                    <span>{{ unit.name }}</span>
+                                    <span v-if="unit.file" style="color: var(--text-light); font-size: 0.75rem;">{{ unit.file }}</span>
+                                </div>
+                            </div>
+                            <div v-else class="no-data">No upstream callers found — changes here have no ripple effect.</div>
+                        </div>
+
+                        <!-- Documentation Panel -->
+                        <div v-if="docs[idx]" class="feature-panel">
+                            <h4>Generated Documentation</h4>
+                            <div class="doc-content" v-html="renderMarkdown(docs[idx])"></div>
                         </div>
                     </div>
 
@@ -809,13 +954,18 @@
                     loading: false,
                     searchDuration: null,
                     error: null,
-                    showDependencies: false,
                     showHistory: false,
                     queryHistory: [],
                     expandedSnippets: {},
                     copiedIdx: null,
                     explainLoading: {},
                     explanations: {},
+                    dependencies: {},
+                    depLoading: {},
+                    impacts: {},
+                    impactLoading: {},
+                    docs: {},
+                    docLoading: {},
                     indexStatus: { files: 0, chunks: 0, updated: '' },
                     apiBase: '/api',
                     currentFact: '',
@@ -1040,8 +1190,14 @@
                     const chunk = this.results.chunks[index];
                     if (!chunk) return;
 
+                    if (this.explanations[index]) {
+                        this.explanations[index] = null;
+                        this.$forceUpdate();
+                        return;
+                    }
+
                     this.explainLoading[index] = true;
-                    this.$forceUpdate(); // Force Vue to update UI
+                    this.$forceUpdate();
 
                     try {
                         const response = await fetch(`${this.apiBase}/explain`, {
@@ -1068,29 +1224,85 @@
                     }
                 },
 
-                scrollToCallers() {
-                    // Find the related-functions section
-                    const section = document.querySelector('.related-functions');
-                    if (section) {
-                        // Scroll to the section
-                        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                async fetchDependencies(index) {
+                    const chunk = this.results.chunks[index];
+                    if (!chunk || !chunk.unit_name) return;
 
-                        // Find and highlight the "Called By" subsection
-                        const calledByDiv = section.querySelector('.dependency-group:nth-child(2)');
-                        if (calledByDiv) {
-                            calledByDiv.style.backgroundColor = 'rgba(255, 184, 28, 0.1)';
-                            setTimeout(() => {
-                                calledByDiv.style.backgroundColor = '';
-                            }, 2000);
-                        }
+                    // Toggle off if already shown
+                    if (this.dependencies[index]) {
+                        this.dependencies[index] = null;
+                        this.$forceUpdate();
+                        return;
+                    }
+
+                    this.depLoading[index] = true;
+                    this.$forceUpdate();
+
+                    try {
+                        const response = await fetch(`${this.apiBase}/dependencies/${encodeURIComponent(chunk.unit_name)}`);
+                        if (!response.ok) throw new Error(response.statusText);
+                        this.dependencies[index] = await response.json();
+                    } catch (err) {
+                        this.dependencies[index] = { calls: [], called_by: [], common_blocks: [], error: err.message };
+                    } finally {
+                        this.depLoading[index] = false;
+                        this.$forceUpdate();
                     }
                 },
 
-                getFileUrl(chunk) {
-                    const marker = 'NASTRAN-95/';
-                    const idx = chunk.file_path.indexOf(marker);
-                    const relPath = idx !== -1 ? chunk.file_path.slice(idx + marker.length) : chunk.file_path;
-                    return this.repoBase + relPath + '#L' + chunk.line_start + '-L' + chunk.line_end;
+                async fetchImpact(index) {
+                    const chunk = this.results.chunks[index];
+                    if (!chunk || !chunk.unit_name) return;
+
+                    if (this.impacts[index]) {
+                        this.impacts[index] = null;
+                        this.$forceUpdate();
+                        return;
+                    }
+
+                    this.impactLoading[index] = true;
+                    this.$forceUpdate();
+
+                    try {
+                        const response = await fetch(`${this.apiBase}/impact/${encodeURIComponent(chunk.unit_name)}?depth=3`);
+                        if (!response.ok) throw new Error(response.statusText);
+                        this.impacts[index] = await response.json();
+                    } catch (err) {
+                        this.impacts[index] = { affected: [], total_affected: 0, error: err.message };
+                    } finally {
+                        this.impactLoading[index] = false;
+                        this.$forceUpdate();
+                    }
+                },
+
+                async documentSnippet(index) {
+                    const chunk = this.results.chunks[index];
+                    if (!chunk) return;
+
+                    if (this.docs[index]) {
+                        this.docs[index] = null;
+                        this.$forceUpdate();
+                        return;
+                    }
+
+                    this.docLoading[index] = true;
+                    this.$forceUpdate();
+
+                    try {
+                        const response = await fetch(`${this.apiBase}/document`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ code: chunk.text, unit_name: chunk.unit_name || '' })
+                        });
+                        if (!response.ok) throw new Error(response.statusText);
+                        const data = await response.json();
+                        this.docs[index] = data.documentation;
+                    } catch (err) {
+                        this.docs[index] = `Error: ${err.message}`;
+                    } finally {
+                        this.docLoading[index] = false;
+                        this.$forceUpdate();
+                    }
                 },
 
                 selectFromHistory(query) {
