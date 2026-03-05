@@ -32,7 +32,7 @@ def generate_answer(question: str, context: str) -> str:
             {"role": "user", "content": question},
         ],
         temperature=0.1,
-        max_tokens=120,
+        max_tokens=settings.llm_max_tokens,
     )
 
     answer = response.choices[0].message.content or ""
@@ -55,7 +55,7 @@ def generate_answer_stream(question: str, context: str) -> Generator[str, None, 
             {"role": "user", "content": question},
         ],
         temperature=0.1,
-        max_tokens=120,
+        max_tokens=settings.llm_max_tokens,
         stream=True,
     )
 

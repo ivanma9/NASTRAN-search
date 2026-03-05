@@ -1,5 +1,7 @@
 """Context assembly for LLM answer generation."""
 
+from legacylens.config import get_settings
+
 SYSTEM_PROMPT = """You analyze NASA NASTRAN-95 (FORTRAN 77). Be concise. Cite file:line references. If context is irrelevant, say so."""
 
 
@@ -13,12 +15,14 @@ def assemble_context(results: list[dict], indices: dict | None = None) -> str:
     Returns:
         Formatted context string for LLM prompt
     """
-    MAX_CONTEXT_CHARS = 3000  # Cap total context to limit prompt tokens
+    settings = get_settings()
+    max_context_chars = settings.max_context_chars
+    max_chunk_lines = settings.max_chunk_lines
     parts = [SYSTEM_PROMPT, "\n--- Retrieved Code Context ---\n"]
     char_count = len(SYSTEM_PROMPT) + 40
 
     for i, result in enumerate(results, 1):
-        if char_count > MAX_CONTEXT_CHARS:
+        if char_count > max_context_chars:
             break
         meta = result["metadata"]
         header = (
@@ -51,8 +55,8 @@ def assemble_context(results: list[dict], indices: dict | None = None) -> str:
         # Truncate very long chunks to reduce prompt tokens and LLM latency
         text = result['text']
         lines = text.split('\n')
-        if len(lines) > 25:
-            text = '\n'.join(lines[:25]) + '\n... (truncated)'
+        if len(lines) > max_chunk_lines:
+            text = '\n'.join(lines[:max_chunk_lines]) + '\n... (truncated)'
         chunk_str = f"```fortran\n{text}\n```\n"
         parts.append(chunk_str)
         char_count += len(header) + len(chunk_str)

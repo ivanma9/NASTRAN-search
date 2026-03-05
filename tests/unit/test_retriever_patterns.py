@@ -9,7 +9,9 @@ from unittest.mock import patch
 
 from legacylens.search.retriever import (
     COMMON_BLOCK_RE,
+    MAX_DISTANCE_THRESHOLD,
     UNIT_NAME_RE,
+    _deduplicate_by_unit,
     _extract_unit_name,
     _keyword_rerank,
 )
@@ -379,3 +381,171 @@ class TestKeywordReranking:
         _keyword_rerank("Show me error handling patterns", results)
 
         assert results[0]["text"].startswith("CALL MESAGE")
+
+    def test_matrix_keywords_boost(self):
+        """Matrix-related queries should boost matrix chunks."""
+        results = [
+            self._make_result("CALL SOLVER(A,B)", 0.7),
+            self._make_result("CALL DECOMP(A,N)\nCALL FBS(A,B,N)\nPIVOT=A(I,I)", 0.8),
+        ]
+        _keyword_rerank("How does matrix decomposition work?", results)
+
+        assert results[0]["text"].startswith("CALL DECOMP")
+
+    def test_element_keywords_boost(self):
+        """Element-related queries should boost element chunks."""
+        results = [
+            self._make_result("CALL SOLVER(A,B)", 0.7),
+            self._make_result("STIFFNESS MATRIX\nCALL ASSEMBLE(ELEMENT,DOF)", 0.8),
+        ]
+        _keyword_rerank("How are element stiffness matrices assembled?", results)
+
+        assert results[0]["text"].startswith("STIFFNESS")
+
+    def test_data_mgmt_keywords_boost(self):
+        """Data management queries should boost GINO/table chunks."""
+        results = [
+            self._make_result("CALL SOLVER(A,B)", 0.7),
+            self._make_result("CALL GINO(BUFFER)\nTRAILER(1)=MCB", 0.8),
+        ]
+        _keyword_rerank("How does GINO buffer management work?", results)
+
+        assert results[0]["text"].startswith("CALL GINO")
+
+
+# ---------------------------------------------------------------------------
+# Distance threshold tests
+# ---------------------------------------------------------------------------
+class TestDistanceThreshold:
+    """Test that MAX_DISTANCE_THRESHOLD filters irrelevant results."""
+
+    def _make_result(self, score, unit_name="TEST"):
+        return {
+            "text": f"SUBROUTINE {unit_name}",
+            "metadata": {"unit_name": unit_name, "file_path": "test.f"},
+            "score": score,
+            "index_context": "",
+        }
+
+    def test_results_within_threshold_kept(self):
+        results = [self._make_result(0.5), self._make_result(1.0), self._make_result(1.2)]
+        filtered = [r for r in results if r["score"] <= MAX_DISTANCE_THRESHOLD]
+        assert len(filtered) == 3
+
+    def test_results_above_threshold_removed(self):
+        results = [self._make_result(0.5), self._make_result(1.5), self._make_result(1.8)]
+        filtered = [r for r in results if r["score"] <= MAX_DISTANCE_THRESHOLD]
+        assert len(filtered) == 1
+        assert filtered[0]["score"] == 0.5
+
+    def test_threshold_boundary(self):
+        results = [self._make_result(1.2), self._make_result(1.2001)]
+        filtered = [r for r in results if r["score"] <= MAX_DISTANCE_THRESHOLD]
+        assert len(filtered) == 1
+
+
+# ---------------------------------------------------------------------------
+# Deduplication tests
+# ---------------------------------------------------------------------------
+class TestDeduplication:
+    """Test that _deduplicate_by_unit keeps only the best chunk per unit."""
+
+    def _make_result(self, unit_name, score):
+        return {
+            "text": f"SUBROUTINE {unit_name}",
+            "metadata": {"unit_name": unit_name, "file_path": "test.f"},
+            "score": score,
+            "index_context": "",
+        }
+
+    def test_keeps_best_score(self):
+        results = [
+            self._make_result("DECOMP", 0.8),
+            self._make_result("DECOMP", 0.5),
+            self._make_result("SOLVER", 0.6),
+        ]
+        _deduplicate_by_unit(results)
+        units = [r["metadata"]["unit_name"] for r in results]
+        assert units.count("DECOMP") == 1
+        decomp = [r for r in results if r["metadata"]["unit_name"] == "DECOMP"][0]
+        assert decomp["score"] == 0.5
+
+    def test_keeps_orphans(self):
+        """Chunks with empty unit_name are always kept."""
+        results = [
+            self._make_result("", 0.5),
+            self._make_result("", 0.6),
+            self._make_result("DECOMP", 0.7),
+        ]
+        _deduplicate_by_unit(results)
+        assert len(results) == 3
+
+    def test_noop_when_no_dupes(self):
+        results = [
+            self._make_result("DECOMP", 0.5),
+            self._make_result("SOLVER", 0.6),
+            self._make_result("MAIN", 0.7),
+        ]
+        _deduplicate_by_unit(results)
+        assert len(results) == 3
+
+
+# ---------------------------------------------------------------------------
+# Call graph scoping tests
+# ---------------------------------------------------------------------------
+class TestCallGraphScoping:
+    """Test that call graph context is only appended to the matching unit."""
+
+    def _make_result(self, unit_name="TEST", score=0.5):
+        return {
+            "text": f"SUBROUTINE {unit_name}",
+            "metadata": {
+                "unit_name": unit_name,
+                "common_blocks": [],
+                "file_path": "test.f",
+                "line_start": 1,
+                "line_end": 10,
+            },
+            "score": score,
+            "index_context": "",
+        }
+
+    @patch("legacylens.search.retriever.load_common_index")
+    @patch("legacylens.search.retriever.load_call_graph")
+    def test_call_graph_context_only_on_matching_unit(self, mock_cg, mock_ci):
+        from legacylens.search.retriever import _augment_with_indices
+
+        mock_ci.return_value = {}
+        mock_cg.return_value = {
+            "DCOMP": {"calls": ["MESAGE"], "called_by": ["SOLVER"]}
+        }
+
+        results = [
+            self._make_result("DCOMP"),
+            self._make_result("OTHER"),
+        ]
+        _augment_with_indices("What does subroutine DCOMP do?", results)
+
+        assert "DCOMP calls" in results[0]["index_context"]
+        # OTHER should NOT have the DCOMP call graph info
+        assert "DCOMP calls" not in results[1]["index_context"]
+
+    @patch("legacylens.search.retriever.load_common_index")
+    @patch("legacylens.search.retriever.load_call_graph")
+    def test_call_graph_fallback_to_first_when_no_match(self, mock_cg, mock_ci):
+        from legacylens.search.retriever import _augment_with_indices
+
+        mock_ci.return_value = {}
+        mock_cg.return_value = {
+            "DCOMP": {"calls": ["MESAGE"], "called_by": ["SOLVER"]}
+        }
+
+        results = [
+            self._make_result("OTHER"),
+            self._make_result("ANOTHER"),
+        ]
+        _augment_with_indices("What does subroutine DCOMP do?", results)
+
+        # Should fall back to first result
+        assert "DCOMP calls" in results[0]["index_context"]
+        assert "DCOMP calls" not in results[1]["index_context"]

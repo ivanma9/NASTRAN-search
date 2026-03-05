@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     llm_model: str = "gpt-4o-mini"
     chunk_max_tokens: int = 1500
     top_k: int = 3
+    max_context_chars: int = 8000
+    max_chunk_lines: int = 75
+    llm_max_tokens: int = 512
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

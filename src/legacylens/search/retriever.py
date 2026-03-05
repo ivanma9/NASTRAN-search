@@ -143,6 +143,12 @@ def retrieve(query: str, top_k: int | None = None) -> list[dict]:
             "index_context": "",
         })
 
+    # Filter out low-relevance results
+    retrieved = [r for r in retrieved if r["score"] <= MAX_DISTANCE_THRESHOLD]
+
+    # Deduplicate sub-chunks: keep only best score per unit_name
+    _deduplicate_by_unit(retrieved)
+
     # Keyword re-ranking: boost results that contain query-relevant terms
     _keyword_rerank(query, retrieved)
 
@@ -151,6 +157,33 @@ def retrieve(query: str, top_k: int | None = None) -> list[dict]:
 
     # Trim back to requested top_k after re-ranking and injection
     return retrieved[:k]
+
+
+def _deduplicate_by_unit(results: list[dict]) -> None:
+    """Keep only the lowest-distance chunk per unit_name.
+
+    Chunks with empty or missing unit_name are always kept.
+    Modifies the list in place.
+    """
+    seen: dict[str, int] = {}  # unit_name -> index of best result
+    to_remove: list[int] = []
+
+    for i, r in enumerate(results):
+        unit = r["metadata"].get("unit_name", "")
+        if not unit:
+            continue
+        if unit in seen:
+            prev_idx = seen[unit]
+            if r["score"] < results[prev_idx]["score"]:
+                to_remove.append(prev_idx)
+                seen[unit] = i
+            else:
+                to_remove.append(i)
+        else:
+            seen[unit] = i
+
+    for idx in sorted(to_remove, reverse=True):
+        results.pop(idx)
 
 
 # Keywords that signal specific coding concepts in Fortran queries
@@ -163,7 +196,24 @@ _ERROR_KEYWORDS = re.compile(
     r"\b(ERROR|FATAL|DIAG|MESAGE|ABORT|WARNING|FAIL)\b",
     re.IGNORECASE,
 )
-_KEYWORD_PATTERNS = [_IO_KEYWORDS, _ERROR_KEYWORDS]
+_MATRIX_KEYWORDS = re.compile(
+    r"\b(DECOMP|SOLVE|MATRIX|INVERT|EIGEN|FACTOR|PIVOT|DIAGONAL|FBS|"
+    r"BANDWIDTH|SPARSE|SYMMETRIC|TRIANGUL)\b",
+    re.IGNORECASE,
+)
+_ELEMENT_KEYWORDS = re.compile(
+    r"\b(ELEMENT|STIFFNESS|MASS|LOAD|FORCE|STRESS|STRAIN|DOF|ASSEMBLE|"
+    r"RIGID|CONSTRAINT|PLATE|BAR|BEAM|QUAD|TRIA)\b",
+    re.IGNORECASE,
+)
+_DATA_MGMT_KEYWORDS = re.compile(
+    r"\b(GINO|TABLE|BUFFER|SCRATCH|POOL|FIST|MCB|TRAILER|PURGE|EQUIV)\b",
+    re.IGNORECASE,
+)
+_KEYWORD_PATTERNS = [
+    _IO_KEYWORDS, _ERROR_KEYWORDS, _MATRIX_KEYWORDS,
+    _ELEMENT_KEYWORDS, _DATA_MGMT_KEYWORDS,
+]
 
 # Bonus per keyword match (subtracted from distance; lower = better)
 _KEYWORD_BONUS = 0.08
@@ -281,8 +331,18 @@ def _augment_with_indices(query: str, results: list[dict], collection=None) -> N
             if entry.get("called_by"):
                 parts.append(f"{unit_name} is called by: {', '.join(entry['called_by'][:5])}")
             if parts:
+                context_str = "\n".join(parts) + "\n"
+                # Only append to the result whose unit_name matches the queried unit
+                target = None
                 for r in results:
-                    r["index_context"] += "\n".join(parts) + "\n"
+                    if r["metadata"].get("unit_name") == unit_name:
+                        target = r
+                        break
+                # Fallback: append to first result so LLM still sees it
+                if target is None and results:
+                    target = results[0]
+                if target is not None:
+                    target["index_context"] += context_str
 
     # Also augment each result with its own COMMON block / call relationships
     for r in results:
