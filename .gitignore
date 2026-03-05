@@ -1,7 +1,6 @@
 NASTRAN-95/
 .env
-# data/chromadb/ — committed for deployment (pre-built embeddings)
-# data/indices/ — committed for deployment (cross-reference indices)
+data/chromadb/chroma.sqlite3
 __pycache__/
 *.pyc
 .DS_Store
@@ -10,3 +9,5 @@ dist/
 build/
 .venv/
 .worktrees/
+.claude/
+.playwright-mcp/
