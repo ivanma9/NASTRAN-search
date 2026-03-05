@@ -594,7 +594,6 @@
 
         /* ── Feature Panels (below snippets) ── */
         .feature-panel {
-            padding: 1rem 1.2rem;
             background: #f8f9fa;
             border-top: 2px solid var(--accent-gold);
             font-size: 0.9rem;
@@ -602,14 +601,50 @@
             animation: fade-in 0.3s ease-out;
         }
 
-        .feature-panel h4 {
+        .feature-panel-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 1.2rem;
+            cursor: pointer;
+            user-select: none;
+            background: rgba(255, 184, 28, 0.08);
+            border-bottom: 1px solid rgba(255, 184, 28, 0.2);
+            transition: background 0.2s;
+        }
+
+        .feature-panel-header:hover {
+            background: rgba(255, 184, 28, 0.15);
+        }
+
+        .panel-expand-icon {
+            font-size: 0.7rem;
+            color: var(--accent-gold);
+            flex-shrink: 0;
+            line-height: 1;
+        }
+
+        .feature-panel-header h4 {
             font-family: "Space Mono", monospace;
             font-size: 0.7rem;
             letter-spacing: 1.5px;
             text-transform: uppercase;
             color: var(--nasa-blue);
-            margin-bottom: 0.6rem;
+            margin: 0;
             font-weight: 700;
+        }
+
+        .feature-panel-content {
+            max-height: 250px;
+            overflow-y: auto;
+            padding: 1rem 1.2rem;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+
+        .feature-panel-content.collapsed {
+            max-height: 0;
+            overflow: hidden;
+            padding: 0;
         }
 
         .dep-section { margin-bottom: 0.8rem; }
@@ -891,59 +926,84 @@
 
                         <!-- Explanation Panel -->
                         <div v-if="explanations[idx]" class="feature-panel">
-                            <h4>Explanation</h4>
-                            <div v-html="renderMarkdown(explanations[idx])"></div>
+                            <div class="feature-panel-header" @click="togglePanel(idx, 'explain')">
+                                <span class="panel-expand-icon">{{ activePanelPerSnippet[idx] === 'explain' ? '▾' : '▸' }}</span>
+                                <h4>Explanation</h4>
+                            </div>
+                            <div class="feature-panel-content" :class="{ collapsed: activePanelPerSnippet[idx] !== 'explain' }">
+                                <div v-html="renderMarkdown(explanations[idx])"></div>
+                            </div>
                         </div>
 
                         <!-- Dependencies Panel -->
                         <div v-if="dependencies[idx]" class="feature-panel">
-                            <h4>Dependencies — {{ chunk.unit_name }}</h4>
-                            <div v-if="dependencies[idx].calls && dependencies[idx].calls.length" class="dep-section">
-                                <div class="dep-section-title">Calls</div>
-                                <ul class="dep-list">
-                                    <li v-for="fn in dependencies[idx].calls" :key="fn">&#9654; {{ fn }}</li>
-                                </ul>
+                            <div class="feature-panel-header" @click="togglePanel(idx, 'deps')">
+                                <span class="panel-expand-icon">{{ activePanelPerSnippet[idx] === 'deps' ? '▾' : '▸' }}</span>
+                                <h4>Dependencies — {{ chunk.unit_name }}</h4>
                             </div>
-                            <div v-if="dependencies[idx].called_by && dependencies[idx].called_by.length" class="dep-section">
-                                <div class="dep-section-title">Called By</div>
-                                <ul class="dep-list">
-                                    <li v-for="fn in dependencies[idx].called_by" :key="fn">&#9664; {{ fn }}</li>
-                                </ul>
-                            </div>
-                            <div v-if="dependencies[idx].common_blocks && dependencies[idx].common_blocks.length" class="dep-section">
-                                <div class="dep-section-title">Shared COMMON Blocks</div>
-                                <ul class="dep-list">
-                                    <li v-for="cb in dependencies[idx].common_blocks" :key="cb">&#9632; {{ cb }}</li>
-                                </ul>
-                            </div>
-                            <div v-if="!dependencies[idx].calls.length && !dependencies[idx].called_by.length && !dependencies[idx].common_blocks.length" class="no-data">
-                                No dependencies found in the call graph index.
+                            <div class="feature-panel-content" :class="{ collapsed: activePanelPerSnippet[idx] !== 'deps' }">
+                                <div v-if="dependencies[idx].calls && dependencies[idx].calls.length" class="dep-section">
+                                    <div class="dep-section-title">Calls</div>
+                                    <ul class="dep-list">
+                                        <li v-for="fn in dependencies[idx].calls" :key="fn">&#9654; {{ fn }}</li>
+                                    </ul>
+                                </div>
+                                <div v-if="dependencies[idx].called_by && dependencies[idx].called_by.length" class="dep-section">
+                                    <div class="dep-section-title">Called By</div>
+                                    <ul class="dep-list">
+                                        <li v-for="fn in dependencies[idx].called_by" :key="fn">&#9664; {{ fn }}</li>
+                                    </ul>
+                                </div>
+                                <div v-if="dependencies[idx].common_blocks && dependencies[idx].common_blocks.length" class="dep-section">
+                                    <div class="dep-section-title">Shared COMMON Blocks</div>
+                                    <ul class="dep-list">
+                                        <li v-for="cb in dependencies[idx].common_blocks" :key="cb">&#9632; {{ cb }}</li>
+                                    </ul>
+                                </div>
+                                <div v-if="!dependencies[idx].calls.length && !dependencies[idx].called_by.length && !dependencies[idx].common_blocks.length" class="no-data">
+                                    No dependencies found in the call graph index.
+                                </div>
                             </div>
                         </div>
 
                         <!-- Impact Analysis Panel -->
                         <div v-if="impacts[idx]" class="feature-panel">
-                            <h4>Impact Analysis — {{ chunk.unit_name }} ({{ impacts[idx].total_affected }} affected)</h4>
-                            <div v-if="impacts[idx].affected && impacts[idx].affected.length">
-                                <div v-for="unit in impacts[idx].affected" :key="unit.name" class="impact-item">
-                                    <span class="impact-depth">D{{ unit.depth }}</span>
-                                    <span>{{ unit.name }}</span>
-                                    <span v-if="unit.file" style="color: var(--text-light); font-size: 0.75rem;">{{ unit.file }}</span>
-                                </div>
+                            <div class="feature-panel-header" @click="togglePanel(idx, 'impact')">
+                                <span class="panel-expand-icon">{{ activePanelPerSnippet[idx] === 'impact' ? '▾' : '▸' }}</span>
+                                <h4>Impact Analysis — {{ chunk.unit_name }} ({{ impacts[idx].total_affected }} affected)</h4>
                             </div>
-                            <div v-else class="no-data">No upstream callers found — changes here have no ripple effect.</div>
+                            <div class="feature-panel-content" :class="{ collapsed: activePanelPerSnippet[idx] !== 'impact' }">
+                                <div v-if="impacts[idx].affected && impacts[idx].affected.length">
+                                    <div v-for="unit in impacts[idx].affected" :key="unit.name" class="impact-item">
+                                        <span class="impact-depth">D{{ unit.depth }}</span>
+                                        <span>{{ unit.name }}</span>
+                                        <span v-if="unit.file" style="color: var(--text-light); font-size: 0.75rem;">{{ unit.file }}</span>
+                                    </div>
+                                </div>
+                                <div v-else class="no-data">No upstream callers found — changes here have no ripple effect.</div>
+                            </div>
                         </div>
 
                         <!-- Documentation Panel -->
                         <div v-if="docs[idx]" class="feature-panel">
-                            <h4>Generated Documentation</h4>
-                            <div class="doc-content" v-html="renderMarkdown(docs[idx])"></div>
+                            <div class="feature-panel-header" @click="togglePanel(idx, 'docs')">
+                                <span class="panel-expand-icon">{{ activePanelPerSnippet[idx] === 'docs' ? '▾' : '▸' }}</span>
+                                <h4>Generated Documentation</h4>
+                            </div>
+                            <div class="feature-panel-content" :class="{ collapsed: activePanelPerSnippet[idx] !== 'docs' }">
+                                <div class="doc-content" v-html="renderMarkdown(docs[idx])"></div>
+                            </div>
                         </div>
 
                         <!-- Translation Panel -->
                         <div v-if="translations[idx]" class="feature-panel">
-                            <h4>Python Translation</h4>
-                            <div class="doc-content" v-html="renderMarkdown(translations[idx])"></div>
+                            <div class="feature-panel-header" @click="togglePanel(idx, 'translate')">
+                                <span class="panel-expand-icon">{{ activePanelPerSnippet[idx] === 'translate' ? '▾' : '▸' }}</span>
+                                <h4>Python Translation</h4>
+                            </div>
+                            <div class="feature-panel-content" :class="{ collapsed: activePanelPerSnippet[idx] !== 'translate' }">
+                                <div class="doc-content" v-html="renderMarkdown(translations[idx])"></div>
+                            </div>
                         </div>
                     </div>
 
@@ -979,6 +1039,7 @@
                     docLoading: {},
                     translations: {},
                     translateLoading: {},
+                    activePanelPerSnippet: {},
                     indexStatus: { files: 0, chunks: 0, updated: '' },
                     apiBase: '/api',
                     currentFact: '',
@@ -1065,6 +1126,15 @@
 
                 toggleSnippet(idx) {
                     this.expandedSnippets[idx] = !this.expandedSnippets[idx];
+                },
+
+                togglePanel(idx, panelType) {
+                    if (this.activePanelPerSnippet[idx] === panelType) {
+                        this.activePanelPerSnippet[idx] = null;
+                    } else {
+                        this.activePanelPerSnippet[idx] = panelType;
+                    }
+                    this.$forceUpdate();
                 },
 
                 async copyCode(text, idx) {
@@ -1205,6 +1275,9 @@
 
                     if (this.explanations[index]) {
                         this.explanations[index] = null;
+                        if (this.activePanelPerSnippet[index] === 'explain') {
+                            this.activePanelPerSnippet[index] = null;
+                        }
                         this.$forceUpdate();
                         return;
                     }
@@ -1229,8 +1302,10 @@
 
                         const data = await response.json();
                         this.explanations[index] = data.explanation;
+                        this.activePanelPerSnippet[index] = 'explain';
                     } catch (err) {
                         this.explanations[index] = `Error: ${err.message || 'Failed to generate explanation'}`;
+                        this.activePanelPerSnippet[index] = 'explain';
                     } finally {
                         this.explainLoading[index] = false;
                         this.$forceUpdate();
@@ -1244,6 +1319,9 @@
                     // Toggle off if already shown
                     if (this.dependencies[index]) {
                         this.dependencies[index] = null;
+                        if (this.activePanelPerSnippet[index] === 'deps') {
+                            this.activePanelPerSnippet[index] = null;
+                        }
                         this.$forceUpdate();
                         return;
                     }
@@ -1255,8 +1333,10 @@
                         const response = await fetch(`${this.apiBase}/dependencies/${encodeURIComponent(chunk.unit_name)}`);
                         if (!response.ok) throw new Error(response.statusText);
                         this.dependencies[index] = await response.json();
+                        this.activePanelPerSnippet[index] = 'deps';
                     } catch (err) {
                         this.dependencies[index] = { calls: [], called_by: [], common_blocks: [], error: err.message };
+                        this.activePanelPerSnippet[index] = 'deps';
                     } finally {
                         this.depLoading[index] = false;
                         this.$forceUpdate();
@@ -1269,6 +1349,9 @@
 
                     if (this.impacts[index]) {
                         this.impacts[index] = null;
+                        if (this.activePanelPerSnippet[index] === 'impact') {
+                            this.activePanelPerSnippet[index] = null;
+                        }
                         this.$forceUpdate();
                         return;
                     }
@@ -1280,8 +1363,10 @@
                         const response = await fetch(`${this.apiBase}/impact/${encodeURIComponent(chunk.unit_name)}?depth=3`);
                         if (!response.ok) throw new Error(response.statusText);
                         this.impacts[index] = await response.json();
+                        this.activePanelPerSnippet[index] = 'impact';
                     } catch (err) {
                         this.impacts[index] = { affected: [], total_affected: 0, error: err.message };
+                        this.activePanelPerSnippet[index] = 'impact';
                     } finally {
                         this.impactLoading[index] = false;
                         this.$forceUpdate();
@@ -1294,6 +1379,9 @@
 
                     if (this.docs[index]) {
                         this.docs[index] = null;
+                        if (this.activePanelPerSnippet[index] === 'docs') {
+                            this.activePanelPerSnippet[index] = null;
+                        }
                         this.$forceUpdate();
                         return;
                     }
@@ -1310,8 +1398,10 @@
                         if (!response.ok) throw new Error(response.statusText);
                         const data = await response.json();
                         this.docs[index] = data.documentation;
+                        this.activePanelPerSnippet[index] = 'docs';
                     } catch (err) {
                         this.docs[index] = `Error: ${err.message}`;
+                        this.activePanelPerSnippet[index] = 'docs';
                     } finally {
                         this.docLoading[index] = false;
                         this.$forceUpdate();
@@ -1324,6 +1414,9 @@
 
                     if (this.translations[index]) {
                         this.translations[index] = null;
+                        if (this.activePanelPerSnippet[index] === 'translate') {
+                            this.activePanelPerSnippet[index] = null;
+                        }
                         this.$forceUpdate();
                         return;
                     }
@@ -1344,8 +1437,10 @@
                         if (!response.ok) throw new Error(response.statusText);
                         const data = await response.json();
                         this.translations[index] = data.translation;
+                        this.activePanelPerSnippet[index] = 'translate';
                     } catch (err) {
                         this.translations[index] = `Error: ${err.message}`;
+                        this.activePanelPerSnippet[index] = 'translate';
                     } finally {
                         this.translateLoading[index] = false;
                         this.$forceUpdate();
