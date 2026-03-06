@@ -1077,38 +1077,6 @@
 
         .glossary-ask-btn:hover { background: #e6a619; }
 
-        /* ── Directory Groups ── */
-        .glossary-dir-group {
-            margin-bottom: 0.5rem;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            overflow: hidden;
-        }
-        .glossary-dir-header {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.6rem 0.75rem;
-            background: var(--nasa-blue);
-            color: white;
-            cursor: pointer;
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.85rem;
-            font-weight: 600;
-            transition: background 0.2s;
-        }
-        .glossary-dir-header:hover { background: #004a8f; }
-        .glossary-dir-header .expand-icon { color: var(--accent-gold); }
-        .glossary-dir-name { flex: 1; }
-        .glossary-dir-count {
-            font-family: "IBM Plex Sans", sans-serif;
-            font-size: 0.7rem;
-            font-weight: 400;
-            opacity: 0.8;
-        }
-        .glossary-dir-contents {
-            padding: 0.25rem 0;
-        }
 
         /* ── View File Button ── */
         .view-file-btn {
@@ -1191,19 +1159,12 @@
                         <div style="margin-top: 0.5rem;">Loading glossary...</div>
                     </div>
 
-                    <div v-if="!glossaryLoading && glossaryGrouped">
+                    <div v-if="!glossaryLoading && glossaryFiltered">
                         <div class="glossary-stats">
                             {{ glossaryFilteredStats.files }} files, {{ glossaryFilteredStats.units }} units
                         </div>
 
-                        <div v-for="group in glossaryGrouped" :key="group.dir" class="glossary-dir-group">
-                            <div class="glossary-dir-header" @click="toggleGlossaryDir(group.dir)">
-                                <span :class="['expand-icon', { expanded: glossaryDirExpanded[group.dir] }]">&#9654;</span>
-                                <span class="glossary-dir-name">{{ group.dir }}/</span>
-                                <span class="glossary-dir-count">{{ group.files.length }} files, {{ group.unitCount }} units</span>
-                            </div>
-                            <div v-if="glossaryDirExpanded[group.dir]" class="glossary-dir-contents">
-                        <div v-for="file in group.files" :key="file.file_path" class="glossary-file-group">
+                        <div v-for="file in glossaryFiltered" :key="file.file_path" class="glossary-file-group">
                             <div class="glossary-file-header" @click="toggleGlossaryFile(file.file_path)">
                                 <div class="glossary-file-header-left">
                                     <span :class="['expand-icon', { expanded: glossaryExpanded[file.file_path] }]">&#9654;</span>
@@ -1239,8 +1200,6 @@
                                 </template>
                             </div>
                         </div>
-                            </div><!-- glossary-dir-contents -->
-                        </div><!-- glossary-dir-group -->
                     </div>
                 </div>
 
@@ -1462,10 +1421,8 @@
                     glossaryData: null,
                     glossaryFiltered: null,
                     glossaryFilteredStats: { files: 0, units: 0 },
-                    glossaryDirExpanded: {},
                     glossaryExpanded: {},
                     glossaryUnitExpanded: {},
-                    glossaryGrouped: null,
                     glossarySearch: '',
                     glossaryTypeFilter: 'all',
                     glossaryLoading: false,
@@ -1901,14 +1858,6 @@
                     }
                 },
 
-                getDir(filePath) {
-                    // Extract directory from path like "NASTRAN-95/bd/file.f" -> "bd"
-                    const parts = filePath.split('/');
-                    if (parts.length >= 3 && parts[0] === 'NASTRAN-95') return parts[1];
-                    if (parts.length >= 2) return parts[0];
-                    return 'other';
-                },
-
                 renderGlossary() {
                     if (!this.glossaryData) return;
                     const search = this.glossarySearch.trim().toUpperCase();
@@ -1937,21 +1886,6 @@
 
                     this.glossaryFiltered = filtered;
                     this.glossaryFilteredStats = { files: totalFiles, units: totalUnits };
-
-                    // Group by directory
-                    const groups = {};
-                    filtered.forEach(file => {
-                        const dir = this.getDir(file.file_path);
-                        if (!groups[dir]) groups[dir] = { dir, files: [], unitCount: 0 };
-                        groups[dir].files.push(file);
-                        groups[dir].unitCount += file.units.length;
-                    });
-                    this.glossaryGrouped = Object.values(groups).sort((a, b) => a.dir.localeCompare(b.dir));
-                },
-
-                toggleGlossaryDir(dir) {
-                    this.glossaryDirExpanded[dir] = !this.glossaryDirExpanded[dir];
-                    this.$forceUpdate();
                 },
 
                 onGlossarySearchInput() {
