@@ -902,53 +902,55 @@
             font-size: 0.85rem;
         }
 
-        .glossary-file-group {
+        .glossary-letter-group {
             background: white;
             border-radius: 6px;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.5rem;
             box-shadow: var(--card-shadow);
             border: 1px solid rgba(0, 0, 0, 0.08);
             overflow: hidden;
         }
 
-        .glossary-file-header {
+        .glossary-letter-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding: 0.6rem 1rem;
+            gap: 0.75rem;
+            padding: 0.5rem 1rem;
             background: var(--nasa-blue);
             color: var(--mission-white);
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.85rem;
             cursor: pointer;
             user-select: none;
             transition: background 0.2s;
         }
 
-        .glossary-file-header:hover { background: #004a8f; }
+        .glossary-letter-header:hover { background: #004a8f; }
 
-        .glossary-file-header-left {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            min-width: 0;
+        .glossary-letter {
+            font-family: "Space Mono", monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-gold);
         }
 
-        .glossary-file-name {
-            font-weight: 600;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-
-        .glossary-unit-count {
-            font-size: 0.65rem;
+        .glossary-letter-count {
+            font-size: 0.7rem;
             padding: 0.1rem 0.5rem;
             border-radius: 10px;
-            background: rgba(255, 184, 28, 0.25);
-            color: var(--accent-gold);
-            font-weight: 700;
+            background: rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 600;
+            margin-left: auto;
+        }
+
+        .glossary-unit-file {
+            color: var(--text-light);
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.7rem;
+            margin-left: auto;
             white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 12rem;
         }
 
         .glossary-units-list {
@@ -1014,14 +1016,6 @@
         }
 
         .glossary-unit-name:hover { text-decoration: underline; }
-
-        .glossary-unit-lines {
-            color: var(--text-light);
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.75rem;
-            margin-left: auto;
-            white-space: nowrap;
-        }
 
         .glossary-unit-expand {
             font-size: 0.65rem;
@@ -1159,29 +1153,26 @@
                         <div style="margin-top: 0.5rem;">Loading glossary...</div>
                     </div>
 
-                    <div v-if="!glossaryLoading && glossaryFiltered">
+                    <div v-if="!glossaryLoading && glossaryIndex">
                         <div class="glossary-stats">
-                            {{ glossaryFilteredStats.files }} files, {{ glossaryFilteredStats.units }} units
+                            {{ glossaryFilteredStats.units }} units
                         </div>
 
-                        <div v-for="file in glossaryFiltered" :key="file.file_path" class="glossary-file-group">
-                            <div class="glossary-file-header" @click="toggleGlossaryFile(file.file_path)">
-                                <div class="glossary-file-header-left">
-                                    <span :class="['expand-icon', { expanded: glossaryExpanded[file.file_path] }]">&#9654;</span>
-                                    <span class="glossary-file-name" :title="file.file_path">{{ basename(file.file_path) }}</span>
-                                </div>
-                                <button class="view-file-btn" @click.stop="viewFile(file.file_path)" style="margin-right: 0.5rem;">View File</button>
-                                <span class="glossary-unit-count">{{ file.units.length }} units</span>
+                        <div v-for="group in glossaryIndex" :key="group.letter" class="glossary-letter-group">
+                            <div class="glossary-letter-header" @click="toggleGlossaryLetter(group.letter)">
+                                <span :class="['expand-icon', { expanded: glossaryLetterExpanded[group.letter] }]">&#9654;</span>
+                                <span class="glossary-letter">{{ group.letter }}</span>
+                                <span class="glossary-letter-count">{{ group.units.length }}</span>
                             </div>
-                            <div v-if="glossaryExpanded[file.file_path]" class="glossary-units-list">
-                                <template v-for="unit in file.units" :key="unit.unit_name">
-                                    <div class="glossary-unit-row" @click="toggleGlossaryUnit(file.file_path + ':' + unit.unit_name)">
-                                        <span class="glossary-unit-expand" :style="{ transform: glossaryUnitExpanded[file.file_path + ':' + unit.unit_name] ? 'rotate(90deg)' : '' }">&#9654;</span>
+                            <div v-if="glossaryLetterExpanded[group.letter]" class="glossary-units-list">
+                                <template v-for="unit in group.units" :key="unit.unit_name + ':' + unit.file_path">
+                                    <div class="glossary-unit-row" @click="toggleGlossaryUnit(unit.unit_name + ':' + unit.file_path)">
+                                        <span class="glossary-unit-expand" :style="{ transform: glossaryUnitExpanded[unit.unit_name + ':' + unit.file_path] ? 'rotate(90deg)' : '' }">&#9654;</span>
                                         <span :class="['unit-type-badge', 'unit-type-' + unit.unit_type]">{{ unit.unit_type }}</span>
                                         <span class="glossary-unit-name" @click.stop="askAboutUnit(unit.unit_name)">{{ unit.unit_name }}</span>
-                                        <span class="glossary-unit-lines">L{{ unit.line_start }}&ndash;{{ unit.line_end }}</span>
+                                        <span class="glossary-unit-file" :title="unit.file_path">{{ basename(unit.file_path) }}:{{ unit.line_start }}</span>
                                     </div>
-                                    <div v-if="glossaryUnitExpanded[file.file_path + ':' + unit.unit_name]" class="glossary-unit-detail">
+                                    <div v-if="glossaryUnitExpanded[unit.unit_name + ':' + unit.file_path]" class="glossary-unit-detail">
                                         <div v-if="unit.calls && unit.calls.length" class="glossary-detail-section">
                                             <span class="glossary-detail-label">Calls:</span>
                                             <span class="glossary-detail-values">{{ unit.calls.join(', ') }}</span>
@@ -1419,9 +1410,9 @@
                     factInterval: null,
                     activeTab: 'search',
                     glossaryData: null,
-                    glossaryFiltered: null,
-                    glossaryFilteredStats: { files: 0, units: 0 },
-                    glossaryExpanded: {},
+                    glossaryIndex: null,
+                    glossaryFilteredStats: { units: 0 },
+                    glossaryLetterExpanded: {},
                     glossaryUnitExpanded: {},
                     glossarySearch: '',
                     glossaryTypeFilter: 'all',
@@ -1863,29 +1854,38 @@
                     const search = this.glossarySearch.trim().toUpperCase();
                     const typeFilter = this.glossaryTypeFilter;
 
-                    let totalFiles = 0;
-                    let totalUnits = 0;
-
-                    const filtered = this.glossaryData.files
-                        .map(file => {
-                            let units = file.units;
-                            if (typeFilter !== 'all') {
-                                units = units.filter(u => u.unit_type === typeFilter);
-                            }
-                            if (search) {
-                                units = units.filter(u => u.unit_name.toUpperCase().includes(search));
-                            }
-                            return units.length > 0 ? { ...file, units } : null;
-                        })
-                        .filter(Boolean);
-
-                    filtered.forEach(f => {
-                        totalFiles++;
-                        totalUnits += f.units.length;
+                    // Flatten all units from all files
+                    let allUnits = [];
+                    this.glossaryData.files.forEach(file => {
+                        file.units.forEach(unit => {
+                            allUnits.push(unit);
+                        });
                     });
 
-                    this.glossaryFiltered = filtered;
-                    this.glossaryFilteredStats = { files: totalFiles, units: totalUnits };
+                    // Filter
+                    if (typeFilter !== 'all') {
+                        allUnits = allUnits.filter(u => u.unit_type === typeFilter);
+                    }
+                    if (search) {
+                        allUnits = allUnits.filter(u => u.unit_name.toUpperCase().includes(search));
+                    }
+
+                    // Sort alphabetically by unit name
+                    allUnits.sort((a, b) => a.unit_name.localeCompare(b.unit_name));
+
+                    // Group by first letter
+                    const groups = {};
+                    allUnits.forEach(unit => {
+                        const letter = (unit.unit_name[0] || '#').toUpperCase();
+                        if (!groups[letter]) groups[letter] = [];
+                        groups[letter].push(unit);
+                    });
+
+                    this.glossaryIndex = Object.keys(groups).sort().map(letter => ({
+                        letter,
+                        units: groups[letter]
+                    }));
+                    this.glossaryFilteredStats = { units: allUnits.length };
                 },
 
                 onGlossarySearchInput() {
@@ -1895,8 +1895,8 @@
                     }, 300);
                 },
 
-                toggleGlossaryFile(filePath) {
-                    this.glossaryExpanded[filePath] = !this.glossaryExpanded[filePath];
+                toggleGlossaryLetter(letter) {
+                    this.glossaryLetterExpanded[letter] = !this.glossaryLetterExpanded[letter];
                     this.$forceUpdate();
                 },
 
