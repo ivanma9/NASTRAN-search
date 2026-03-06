@@ -1,6 +1,6 @@
 NASTRAN-95/
 .env
-data/chromadb/chroma.sqlite3
+# data/chromadb tracked via Git LFS
 __pycache__/
 *.pyc
 .DS_Store
