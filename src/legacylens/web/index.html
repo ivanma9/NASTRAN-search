@@ -1077,6 +1077,39 @@
 
         .glossary-ask-btn:hover { background: #e6a619; }
 
+        /* ── Directory Groups ── */
+        .glossary-dir-group {
+            margin-bottom: 0.5rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .glossary-dir-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.6rem 0.75rem;
+            background: var(--nasa-blue);
+            color: white;
+            cursor: pointer;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        .glossary-dir-header:hover { background: #004a8f; }
+        .glossary-dir-header .expand-icon { color: var(--accent-gold); }
+        .glossary-dir-name { flex: 1; }
+        .glossary-dir-count {
+            font-family: "IBM Plex Sans", sans-serif;
+            font-size: 0.7rem;
+            font-weight: 400;
+            opacity: 0.8;
+        }
+        .glossary-dir-contents {
+            padding: 0.25rem 0;
+        }
+
         /* ── View File Button ── */
         .view-file-btn {
             background: transparent;
@@ -1098,99 +1131,6 @@
             color: white;
         }
 
-        /* ── File Viewer Modal ── */
-        .file-viewer-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .file-viewer-modal {
-            background: var(--mission-white);
-            border-radius: 8px;
-            width: 90vw;
-            max-width: 1000px;
-            height: 85vh;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            border: 2px solid var(--nasa-blue);
-        }
-        .file-viewer-header {
-            background: var(--nasa-blue);
-            color: white;
-            padding: 0.75rem 1rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-radius: 6px 6px 0 0;
-        }
-        .file-viewer-header h3 {
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.85rem;
-            font-weight: 600;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            flex: 1;
-        }
-        .file-viewer-close {
-            background: transparent;
-            border: 1px solid rgba(255,255,255,0.3);
-            color: white;
-            padding: 0.25rem 0.6rem;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            margin-left: 1rem;
-            transition: background 0.2s;
-        }
-        .file-viewer-close:hover { background: rgba(255,255,255,0.15); }
-        .file-viewer-body {
-            flex: 1;
-            overflow: auto;
-            display: flex;
-        }
-        .file-viewer-line-numbers {
-            background: #2d3748;
-            color: #718096;
-            padding: 1rem 0.75rem;
-            text-align: right;
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.75rem;
-            line-height: 1.5;
-            user-select: none;
-            white-space: pre;
-            min-width: 3.5rem;
-        }
-        .file-viewer-code {
-            flex: 1;
-            overflow-x: auto;
-            background: #1a202c;
-            padding: 1rem;
-        }
-        .file-viewer-code pre {
-            margin: 0;
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.75rem;
-            line-height: 1.5;
-            color: #e2e8f0;
-        }
-        .file-viewer-code .highlight-line {
-            background: rgba(255, 184, 28, 0.15);
-            display: block;
-        }
-        .file-viewer-loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex: 1;
-            color: var(--text-light);
-            font-size: 0.9rem;
-        }
     </style>
 </head>
 <body>
@@ -1251,18 +1191,25 @@
                         <div style="margin-top: 0.5rem;">Loading glossary...</div>
                     </div>
 
-                    <div v-if="!glossaryLoading && glossaryFiltered">
+                    <div v-if="!glossaryLoading && glossaryGrouped">
                         <div class="glossary-stats">
                             {{ glossaryFilteredStats.files }} files, {{ glossaryFilteredStats.units }} units
                         </div>
 
-                        <div v-for="file in glossaryFiltered" :key="file.file_path" class="glossary-file-group">
+                        <div v-for="group in glossaryGrouped" :key="group.dir" class="glossary-dir-group">
+                            <div class="glossary-dir-header" @click="toggleGlossaryDir(group.dir)">
+                                <span :class="['expand-icon', { expanded: glossaryDirExpanded[group.dir] }]">&#9654;</span>
+                                <span class="glossary-dir-name">{{ group.dir }}/</span>
+                                <span class="glossary-dir-count">{{ group.files.length }} files, {{ group.unitCount }} units</span>
+                            </div>
+                            <div v-if="glossaryDirExpanded[group.dir]" class="glossary-dir-contents">
+                        <div v-for="file in group.files" :key="file.file_path" class="glossary-file-group">
                             <div class="glossary-file-header" @click="toggleGlossaryFile(file.file_path)">
                                 <div class="glossary-file-header-left">
                                     <span :class="['expand-icon', { expanded: glossaryExpanded[file.file_path] }]">&#9654;</span>
                                     <span class="glossary-file-name" :title="file.file_path">{{ basename(file.file_path) }}</span>
                                 </div>
-                                <button class="view-file-btn" @click.stop="viewFile(file.file_path, 0, 0)" style="margin-right: 0.5rem;">View File</button>
+                                <button class="view-file-btn" @click.stop="viewFile(file.file_path)" style="margin-right: 0.5rem;">View File</button>
                                 <span class="glossary-unit-count">{{ file.units.length }} units</span>
                             </div>
                             <div v-if="glossaryExpanded[file.file_path]" class="glossary-units-list">
@@ -1286,12 +1233,14 @@
                                             <span class="glossary-detail-label">COMMON Blocks:</span>
                                             <span class="glossary-detail-values">{{ unit.common_blocks.join(', ') }}</span>
                                         </div>
-                                        <button class="view-file-btn" @click.stop="viewFile(unit.file_path, unit.line_start, unit.line_end)" style="margin-right: 0.5rem;">View File</button>
+                                        <button class="view-file-btn" @click.stop="viewFile(unit.file_path, unit.line_start)" style="margin-right: 0.5rem;">View File</button>
                                         <button class="glossary-ask-btn" @click.stop="askAboutUnit(unit.unit_name)">Ask about {{ unit.unit_name }}</button>
                                     </div>
                                 </template>
                             </div>
                         </div>
+                            </div><!-- glossary-dir-contents -->
+                        </div><!-- glossary-dir-group -->
                     </div>
                 </div>
 
@@ -1343,7 +1292,7 @@
                                 <span :class="['relevance-badge', 'relevance-' + getRelevance(chunk.score).level]">
                                     {{ getRelevance(chunk.score).label }}
                                 </span>
-                                <button class="view-file-btn" @click.stop="viewFile(chunk.file_path, chunk.line_start, chunk.line_end)">View File</button>
+                                <button class="view-file-btn" @click.stop="viewFile(chunk.file_path, chunk.line_start)">View File</button>
                                 <button class="copy-btn" :class="{ copied: copiedIdx === idx }" @click.stop="copyCode(chunk.text, idx)">
                                     {{ copiedIdx === idx ? '&#10003; Copied' : 'Copy' }}
                                 </button>
@@ -1475,33 +1424,6 @@
             </div>
         </div>
 
-        <!-- File Viewer Modal -->
-        <div v-if="fileViewer.visible" class="file-viewer-overlay" @click.self="closeFileViewer">
-            <div class="file-viewer-modal">
-                <div class="file-viewer-header">
-                    <h3 :title="fileViewer.path">{{ basename(fileViewer.path) }}</h3>
-                    <span v-if="fileViewer.highlightStart" style="font-size: 0.75rem; opacity: 0.8; margin-left: 0.5rem;">
-                        Lines {{ fileViewer.highlightStart }}&ndash;{{ fileViewer.highlightEnd }}
-                    </span>
-                    <button class="file-viewer-close" @click="closeFileViewer">Close &times;</button>
-                </div>
-                <div class="file-viewer-body">
-                    <div v-if="fileViewer.loading" class="file-viewer-loading">
-                        <div class="loading-spinner-inline"></div>
-                        <span style="margin-left: 0.5rem;">Loading file...</span>
-                    </div>
-                    <template v-else-if="fileViewer.content !== null">
-                        <div class="file-viewer-line-numbers">{{ fileViewerLineNumbers }}</div>
-                        <div class="file-viewer-code">
-                            <pre v-html="fileViewerHighlightedContent"></pre>
-                        </div>
-                    </template>
-                    <div v-else-if="fileViewer.error" class="file-viewer-loading" style="color: var(--nasa-red);">
-                        {{ fileViewer.error }}
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -1540,14 +1462,15 @@
                     glossaryData: null,
                     glossaryFiltered: null,
                     glossaryFilteredStats: { files: 0, units: 0 },
+                    glossaryDirExpanded: {},
                     glossaryExpanded: {},
                     glossaryUnitExpanded: {},
+                    glossaryGrouped: null,
                     glossarySearch: '',
                     glossaryTypeFilter: 'all',
                     glossaryLoading: false,
                     glossaryLoaded: false,
                     glossaryDebounceTimer: null,
-                    fileViewer: { visible: false, path: '', content: null, loading: false, error: null, highlightStart: 0, highlightEnd: 0 },
                     sampleQueries: [
                         'What does the DCOMP subroutine do?',
                         'How does NASTRAN handle matrix decomposition?',
@@ -1571,27 +1494,6 @@
                         'FORTRAN 77 was the standard for scientific computing in the 1980s-2000s',
                     ]
                 };
-            },
-            computed: {
-                fileViewerLineNumbers() {
-                    if (!this.fileViewer.content) return '';
-                    const lines = this.fileViewer.content.split('\n');
-                    return lines.map((_, i) => i + 1).join('\n');
-                },
-                fileViewerHighlightedContent() {
-                    if (!this.fileViewer.content) return '';
-                    const lines = this.fileViewer.content.split('\n');
-                    const hl1 = this.fileViewer.highlightStart;
-                    const hl2 = this.fileViewer.highlightEnd;
-                    return lines.map((line, i) => {
-                        const lineNum = i + 1;
-                        const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                        if (hl1 && lineNum >= hl1 && lineNum <= hl2) {
-                            return `<span class="highlight-line">${escaped}</span>`;
-                        }
-                        return escaped;
-                    }).join('\n');
-                }
             },
             mounted() {
                 const input = document.getElementById('search-input');
@@ -1999,6 +1901,14 @@
                     }
                 },
 
+                getDir(filePath) {
+                    // Extract directory from path like "NASTRAN-95/bd/file.f" -> "bd"
+                    const parts = filePath.split('/');
+                    if (parts.length >= 3 && parts[0] === 'NASTRAN-95') return parts[1];
+                    if (parts.length >= 2) return parts[0];
+                    return 'other';
+                },
+
                 renderGlossary() {
                     if (!this.glossaryData) return;
                     const search = this.glossarySearch.trim().toUpperCase();
@@ -2027,6 +1937,21 @@
 
                     this.glossaryFiltered = filtered;
                     this.glossaryFilteredStats = { files: totalFiles, units: totalUnits };
+
+                    // Group by directory
+                    const groups = {};
+                    filtered.forEach(file => {
+                        const dir = this.getDir(file.file_path);
+                        if (!groups[dir]) groups[dir] = { dir, files: [], unitCount: 0 };
+                        groups[dir].files.push(file);
+                        groups[dir].unitCount += file.units.length;
+                    });
+                    this.glossaryGrouped = Object.values(groups).sort((a, b) => a.dir.localeCompare(b.dir));
+                },
+
+                toggleGlossaryDir(dir) {
+                    this.glossaryDirExpanded[dir] = !this.glossaryDirExpanded[dir];
+                    this.$forceUpdate();
                 },
 
                 onGlossarySearchInput() {
@@ -2054,35 +1979,12 @@
                     this.performSearch();
                 },
 
-                async viewFile(filePath, lineStart, lineEnd) {
-                    this.fileViewer = { visible: true, path: filePath, content: null, loading: true, error: null, highlightStart: lineStart || 0, highlightEnd: lineEnd || 0 };
-                    try {
-                        const response = await fetch(`${this.apiBase}/file?path=${encodeURIComponent(filePath)}`);
-                        if (!response.ok) throw new Error(response.status === 404 ? 'File not found' : response.statusText);
-                        this.fileViewer.content = await response.text();
-                        // Scroll to highlighted line after render
-                        this.$nextTick(() => {
-                            if (lineStart) {
-                                const lineNumbers = document.querySelector('.file-viewer-line-numbers');
-                                if (lineNumbers) {
-                                    const lineHeight = parseFloat(getComputedStyle(lineNumbers).lineHeight);
-                                    const scrollTarget = (lineStart - 5) * lineHeight;
-                                    lineNumbers.parentElement.scrollTop = Math.max(0, scrollTarget);
-                                    // Sync code pane scroll
-                                    const codePane = document.querySelector('.file-viewer-code');
-                                    if (codePane) codePane.scrollTop = Math.max(0, scrollTarget);
-                                }
-                            }
-                        });
-                    } catch (err) {
-                        this.fileViewer.error = err.message || 'Failed to load file';
-                    } finally {
-                        this.fileViewer.loading = false;
-                    }
-                },
-
-                closeFileViewer() {
-                    this.fileViewer.visible = false;
+                viewFile(filePath, lineStart) {
+                    // Strip leading NASTRAN-95/ prefix to get repo-relative path
+                    const repoPath = filePath.replace(/^NASTRAN-95\//, '');
+                    let url = `https://github.com/nasa/NASTRAN-95/blob/master/${repoPath}`;
+                    if (lineStart) url += `#L${lineStart}`;
+                    window.open(url, '_blank');
                 },
 
                 selectFromHistory(query) {

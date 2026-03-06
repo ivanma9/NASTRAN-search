@@ -7,9 +7,9 @@ import json
 import logging
 from functools import lru_cache
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from pydantic import BaseModel
@@ -478,38 +478,6 @@ async def get_glossary():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Glossary failed: {e}")
 
-
-@app.get("/api/file", response_class=PlainTextResponse)
-async def get_file(path: str = Query(..., description="Absolute path to source file")):
-    """Return the raw content of a NASTRAN source file."""
-    file_path = Path(path).resolve()
-
-    # Security: only allow reading files that exist in the ChromaDB index
-    # (i.e., files that were ingested). This prevents arbitrary file reads.
-    try:
-        import chromadb
-        settings = get_settings()
-        client = chromadb.PersistentClient(path=settings.chromadb_path)
-        collection = client.get_collection(name=settings.collection_name)
-        results = collection.get(
-            where={"file_path": str(file_path)},
-            include=[],
-            limit=1,
-        )
-        if not results["ids"]:
-            raise HTTPException(status_code=404, detail="File not found in index")
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Index lookup failed: {e}")
-
-    if not file_path.exists():
-        raise HTTPException(status_code=404, detail="File not found on disk")
-
-    try:
-        return file_path.read_text(encoding="utf-8", errors="replace")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to read file: {e}")
 
 
 def _build_chunks(results: list[dict]) -> list[ChunkResponse]:
