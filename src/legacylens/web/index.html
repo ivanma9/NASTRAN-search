@@ -797,6 +797,400 @@
 
         .answer-card { animation: fade-in 0.4s ease-out; }
         .code-snippet { animation: fade-in 0.4s ease-out; }
+
+        /* ── Tab Toggle ── */
+        .tab-toggle {
+            display: flex;
+            gap: 0;
+            margin-right: 1rem;
+        }
+
+        .tab-btn {
+            font-family: "Space Mono", monospace;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            padding: 0.4rem 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            transition: all 0.2s;
+            color: rgba(255, 255, 255, 0.6);
+            background: transparent;
+        }
+
+        .tab-btn:first-child { border-radius: 4px 0 0 4px; }
+        .tab-btn:last-child { border-radius: 0 4px 4px 0; }
+
+        .tab-btn.active {
+            background: var(--nasa-blue);
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+
+        .tab-btn:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        /* ── Glossary Panel ── */
+        .glossary-panel { animation: fade-in 0.3s ease-out; }
+
+        .glossary-controls {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            align-items: center;
+        }
+
+        .glossary-filter-input {
+            flex: 1;
+            padding: 0.6rem 1rem;
+            border: 1px solid rgba(0, 58, 112, 0.2);
+            border-radius: 6px;
+            font-family: "IBM Plex Sans", sans-serif;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.3s;
+            background: white;
+        }
+
+        .glossary-filter-input:focus {
+            border-color: var(--accent-gold);
+        }
+
+        .glossary-type-filter {
+            padding: 0.6rem 0.8rem;
+            border: 1px solid rgba(0, 58, 112, 0.2);
+            border-radius: 6px;
+            font-family: "IBM Plex Sans", sans-serif;
+            font-size: 0.85rem;
+            background: white;
+            outline: none;
+            cursor: pointer;
+            color: var(--text-dark);
+        }
+
+        .glossary-type-filter:focus {
+            border-color: var(--accent-gold);
+        }
+
+        .glossary-stats {
+            font-family: "Space Mono", monospace;
+            font-size: 0.75rem;
+            color: var(--text-light);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .glossary-stats::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .glossary-loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
+            font-family: "Space Mono", monospace;
+            font-size: 0.85rem;
+        }
+
+        .glossary-file-group {
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 0.75rem;
+            box-shadow: var(--card-shadow);
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .glossary-file-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 1rem;
+            background: var(--nasa-blue);
+            color: var(--mission-white);
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.85rem;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+
+        .glossary-file-header:hover { background: #004a8f; }
+
+        .glossary-file-header-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 0;
+        }
+
+        .glossary-file-name {
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .glossary-unit-count {
+            font-size: 0.65rem;
+            padding: 0.1rem 0.5rem;
+            border-radius: 10px;
+            background: rgba(255, 184, 28, 0.25);
+            color: var(--accent-gold);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .glossary-units-list {
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .glossary-unit-row {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+            cursor: pointer;
+            transition: background 0.15s;
+            font-size: 0.85rem;
+        }
+
+        .glossary-unit-row:hover { background: rgba(0, 58, 112, 0.04); }
+        .glossary-unit-row:last-child { border-bottom: none; }
+
+        .unit-type-badge {
+            font-size: 0.6rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 3px;
+            font-weight: 700;
+            font-family: "IBM Plex Mono", monospace;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            min-width: 4rem;
+            text-align: center;
+        }
+
+        .unit-type-subroutine {
+            background: rgba(0, 58, 112, 0.12);
+            color: var(--nasa-blue);
+            border: 1px solid rgba(0, 58, 112, 0.25);
+        }
+
+        .unit-type-function {
+            background: rgba(255, 184, 28, 0.15);
+            color: #b38200;
+            border: 1px solid rgba(255, 184, 28, 0.4);
+        }
+
+        .unit-type-program {
+            background: rgba(211, 47, 47, 0.1);
+            color: var(--nasa-red);
+            border: 1px solid rgba(211, 47, 47, 0.3);
+        }
+
+        .unit-type-block_data, .unit-type-block-data {
+            background: rgba(0, 0, 0, 0.06);
+            color: var(--text-light);
+            border: 1px solid rgba(0, 0, 0, 0.12);
+        }
+
+        .glossary-unit-name {
+            font-family: "IBM Plex Mono", monospace;
+            font-weight: 600;
+            color: var(--nasa-blue);
+            cursor: pointer;
+        }
+
+        .glossary-unit-name:hover { text-decoration: underline; }
+
+        .glossary-unit-lines {
+            color: var(--text-light);
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.75rem;
+            margin-left: auto;
+            white-space: nowrap;
+        }
+
+        .glossary-unit-expand {
+            font-size: 0.65rem;
+            color: var(--accent-gold);
+            transition: transform 0.2s;
+        }
+
+        .glossary-unit-detail {
+            padding: 0.6rem 1rem 0.6rem 2rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            font-size: 0.8rem;
+            animation: fade-in 0.2s ease-out;
+        }
+
+        .glossary-detail-section {
+            margin-bottom: 0.4rem;
+        }
+
+        .glossary-detail-section:last-child { margin-bottom: 0; }
+
+        .glossary-detail-label {
+            font-family: "Space Mono", monospace;
+            font-size: 0.65rem;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-right: 0.4rem;
+        }
+
+        .glossary-detail-values {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.8rem;
+            color: var(--text-dark);
+        }
+
+        .glossary-ask-btn {
+            display: inline-block;
+            margin-top: 0.4rem;
+            background: var(--accent-gold);
+            color: var(--nasa-blue);
+            border: none;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            font-family: "Space Mono", monospace;
+            font-size: 0.65rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: background 0.2s;
+        }
+
+        .glossary-ask-btn:hover { background: #e6a619; }
+
+        /* ── View File Button ── */
+        .view-file-btn {
+            background: transparent;
+            border: 1px solid var(--nasa-blue);
+            color: var(--nasa-blue);
+            padding: 0.15rem 0.5rem;
+            border-radius: 3px;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.65rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .view-file-btn:hover {
+            background: var(--nasa-blue);
+            color: white;
+        }
+
+        /* ── File Viewer Modal ── */
+        .file-viewer-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .file-viewer-modal {
+            background: var(--mission-white);
+            border-radius: 8px;
+            width: 90vw;
+            max-width: 1000px;
+            height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 2px solid var(--nasa-blue);
+        }
+        .file-viewer-header {
+            background: var(--nasa-blue);
+            color: white;
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-radius: 6px 6px 0 0;
+        }
+        .file-viewer-header h3 {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.85rem;
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+        .file-viewer-close {
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 0.25rem 0.6rem;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-left: 1rem;
+            transition: background 0.2s;
+        }
+        .file-viewer-close:hover { background: rgba(255,255,255,0.15); }
+        .file-viewer-body {
+            flex: 1;
+            overflow: auto;
+            display: flex;
+        }
+        .file-viewer-line-numbers {
+            background: #2d3748;
+            color: #718096;
+            padding: 1rem 0.75rem;
+            text-align: right;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.75rem;
+            line-height: 1.5;
+            user-select: none;
+            white-space: pre;
+            min-width: 3.5rem;
+        }
+        .file-viewer-code {
+            flex: 1;
+            overflow-x: auto;
+            background: #1a202c;
+            padding: 1rem;
+        }
+        .file-viewer-code pre {
+            margin: 0;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.75rem;
+            line-height: 1.5;
+            color: #e2e8f0;
+        }
+        .file-viewer-code .highlight-line {
+            background: rgba(255, 184, 28, 0.15);
+            display: block;
+        }
+        .file-viewer-loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            color: var(--text-light);
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -804,6 +1198,10 @@
         <div class="header">
             <div class="header-content">
                 <h1>LEGACYLENS<span class="mission-badge">v1</span></h1>
+                <div class="tab-toggle">
+                    <button class="tab-btn" :class="{ active: activeTab === 'search' }" @click="switchTab('search')">Search</button>
+                    <button class="tab-btn" :class="{ active: activeTab === 'glossary' }" @click="switchTab('glossary')">Glossary</button>
+                </div>
                 <div class="search-bar">
                     <input
                         type="text"
@@ -832,8 +1230,73 @@
         <div class="main-content">
             <div class="content-wrapper">
 
+                <!-- Glossary Panel -->
+                <div v-show="activeTab === 'glossary'" class="glossary-panel">
+                    <div class="glossary-controls">
+                        <input type="text" class="glossary-filter-input"
+                               placeholder="Filter units by name..."
+                               v-model="glossarySearch"
+                               @input="onGlossarySearchInput" />
+                        <select class="glossary-type-filter" v-model="glossaryTypeFilter" @change="renderGlossary()">
+                            <option value="all">All Types</option>
+                            <option value="subroutine">Subroutine</option>
+                            <option value="function">Function</option>
+                            <option value="program">Program</option>
+                            <option value="block_data">Block Data</option>
+                        </select>
+                    </div>
+
+                    <div v-if="glossaryLoading" class="glossary-loading">
+                        <div class="loading-spinner-inline"></div>
+                        <div style="margin-top: 0.5rem;">Loading glossary...</div>
+                    </div>
+
+                    <div v-if="!glossaryLoading && glossaryFiltered">
+                        <div class="glossary-stats">
+                            {{ glossaryFilteredStats.files }} files, {{ glossaryFilteredStats.units }} units
+                        </div>
+
+                        <div v-for="file in glossaryFiltered" :key="file.file_path" class="glossary-file-group">
+                            <div class="glossary-file-header" @click="toggleGlossaryFile(file.file_path)">
+                                <div class="glossary-file-header-left">
+                                    <span :class="['expand-icon', { expanded: glossaryExpanded[file.file_path] }]">&#9654;</span>
+                                    <span class="glossary-file-name" :title="file.file_path">{{ basename(file.file_path) }}</span>
+                                </div>
+                                <button class="view-file-btn" @click.stop="viewFile(file.file_path, 0, 0)" style="margin-right: 0.5rem;">View File</button>
+                                <span class="glossary-unit-count">{{ file.units.length }} units</span>
+                            </div>
+                            <div v-if="glossaryExpanded[file.file_path]" class="glossary-units-list">
+                                <template v-for="unit in file.units" :key="unit.unit_name">
+                                    <div class="glossary-unit-row" @click="toggleGlossaryUnit(file.file_path + ':' + unit.unit_name)">
+                                        <span class="glossary-unit-expand" :style="{ transform: glossaryUnitExpanded[file.file_path + ':' + unit.unit_name] ? 'rotate(90deg)' : '' }">&#9654;</span>
+                                        <span :class="['unit-type-badge', 'unit-type-' + unit.unit_type]">{{ unit.unit_type }}</span>
+                                        <span class="glossary-unit-name" @click.stop="askAboutUnit(unit.unit_name)">{{ unit.unit_name }}</span>
+                                        <span class="glossary-unit-lines">L{{ unit.line_start }}&ndash;{{ unit.line_end }}</span>
+                                    </div>
+                                    <div v-if="glossaryUnitExpanded[file.file_path + ':' + unit.unit_name]" class="glossary-unit-detail">
+                                        <div v-if="unit.calls && unit.calls.length" class="glossary-detail-section">
+                                            <span class="glossary-detail-label">Calls:</span>
+                                            <span class="glossary-detail-values">{{ unit.calls.join(', ') }}</span>
+                                        </div>
+                                        <div v-if="unit.called_by && unit.called_by.length" class="glossary-detail-section">
+                                            <span class="glossary-detail-label">Called By:</span>
+                                            <span class="glossary-detail-values">{{ unit.called_by.join(', ') }}</span>
+                                        </div>
+                                        <div v-if="unit.common_blocks && unit.common_blocks.length" class="glossary-detail-section">
+                                            <span class="glossary-detail-label">COMMON Blocks:</span>
+                                            <span class="glossary-detail-values">{{ unit.common_blocks.join(', ') }}</span>
+                                        </div>
+                                        <button class="view-file-btn" @click.stop="viewFile(unit.file_path, unit.line_start, unit.line_end)" style="margin-right: 0.5rem;">View File</button>
+                                        <button class="glossary-ask-btn" @click.stop="askAboutUnit(unit.unit_name)">Ask about {{ unit.unit_name }}</button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Landing -->
-                <div v-if="!currentQuery" class="landing">
+                <div v-if="!currentQuery && activeTab === 'search'" class="landing">
                     <h2 class="landing-title">Search Legacy Code</h2>
                     <p class="landing-subtitle">Ask questions about the NASTRAN-95 FORTRAN codebase</p>
                     <div class="sample-queries">
@@ -844,7 +1307,7 @@
                 </div>
 
                 <!-- Results -->
-                <div v-else>
+                <div v-else v-show="activeTab === 'search'">
 
                     <!-- Loading -->
                     <div v-if="loading && currentFact" class="loading-fact">
@@ -880,6 +1343,7 @@
                                 <span :class="['relevance-badge', 'relevance-' + getRelevance(chunk.score).level]">
                                     {{ getRelevance(chunk.score).label }}
                                 </span>
+                                <button class="view-file-btn" @click.stop="viewFile(chunk.file_path, chunk.line_start, chunk.line_end)">View File</button>
                                 <button class="copy-btn" :class="{ copied: copiedIdx === idx }" @click.stop="copyCode(chunk.text, idx)">
                                     {{ copiedIdx === idx ? '&#10003; Copied' : 'Copy' }}
                                 </button>
@@ -1010,6 +1474,34 @@
                 </div>
             </div>
         </div>
+
+        <!-- File Viewer Modal -->
+        <div v-if="fileViewer.visible" class="file-viewer-overlay" @click.self="closeFileViewer">
+            <div class="file-viewer-modal">
+                <div class="file-viewer-header">
+                    <h3 :title="fileViewer.path">{{ basename(fileViewer.path) }}</h3>
+                    <span v-if="fileViewer.highlightStart" style="font-size: 0.75rem; opacity: 0.8; margin-left: 0.5rem;">
+                        Lines {{ fileViewer.highlightStart }}&ndash;{{ fileViewer.highlightEnd }}
+                    </span>
+                    <button class="file-viewer-close" @click="closeFileViewer">Close &times;</button>
+                </div>
+                <div class="file-viewer-body">
+                    <div v-if="fileViewer.loading" class="file-viewer-loading">
+                        <div class="loading-spinner-inline"></div>
+                        <span style="margin-left: 0.5rem;">Loading file...</span>
+                    </div>
+                    <template v-else-if="fileViewer.content !== null">
+                        <div class="file-viewer-line-numbers">{{ fileViewerLineNumbers }}</div>
+                        <div class="file-viewer-code">
+                            <pre v-html="fileViewerHighlightedContent"></pre>
+                        </div>
+                    </template>
+                    <div v-else-if="fileViewer.error" class="file-viewer-loading" style="color: var(--nasa-red);">
+                        {{ fileViewer.error }}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -1044,6 +1536,18 @@
                     apiBase: '/api',
                     currentFact: '',
                     factInterval: null,
+                    activeTab: 'search',
+                    glossaryData: null,
+                    glossaryFiltered: null,
+                    glossaryFilteredStats: { files: 0, units: 0 },
+                    glossaryExpanded: {},
+                    glossaryUnitExpanded: {},
+                    glossarySearch: '',
+                    glossaryTypeFilter: 'all',
+                    glossaryLoading: false,
+                    glossaryLoaded: false,
+                    glossaryDebounceTimer: null,
+                    fileViewer: { visible: false, path: '', content: null, loading: false, error: null, highlightStart: 0, highlightEnd: 0 },
                     sampleQueries: [
                         'What does the DCOMP subroutine do?',
                         'How does NASTRAN handle matrix decomposition?',
@@ -1067,6 +1571,27 @@
                         'FORTRAN 77 was the standard for scientific computing in the 1980s-2000s',
                     ]
                 };
+            },
+            computed: {
+                fileViewerLineNumbers() {
+                    if (!this.fileViewer.content) return '';
+                    const lines = this.fileViewer.content.split('\n');
+                    return lines.map((_, i) => i + 1).join('\n');
+                },
+                fileViewerHighlightedContent() {
+                    if (!this.fileViewer.content) return '';
+                    const lines = this.fileViewer.content.split('\n');
+                    const hl1 = this.fileViewer.highlightStart;
+                    const hl2 = this.fileViewer.highlightEnd;
+                    return lines.map((line, i) => {
+                        const lineNum = i + 1;
+                        const escaped = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        if (hl1 && lineNum >= hl1 && lineNum <= hl2) {
+                            return `<span class="highlight-line">${escaped}</span>`;
+                        }
+                        return escaped;
+                    }).join('\n');
+                }
             },
             mounted() {
                 const input = document.getElementById('search-input');
@@ -1445,6 +1970,119 @@
                         this.translateLoading[index] = false;
                         this.$forceUpdate();
                     }
+                },
+
+                basename(path) {
+                    if (!path) return '';
+                    return path.split('/').pop() || path;
+                },
+
+                switchTab(tab) {
+                    this.activeTab = tab;
+                    if (tab === 'glossary' && !this.glossaryLoaded) {
+                        this.loadGlossary();
+                    }
+                },
+
+                async loadGlossary() {
+                    this.glossaryLoading = true;
+                    try {
+                        const response = await fetch(`${this.apiBase}/glossary`);
+                        if (!response.ok) throw new Error(response.statusText);
+                        this.glossaryData = await response.json();
+                        this.glossaryLoaded = true;
+                        this.renderGlossary();
+                    } catch (err) {
+                        console.error('Failed to load glossary:', err);
+                    } finally {
+                        this.glossaryLoading = false;
+                    }
+                },
+
+                renderGlossary() {
+                    if (!this.glossaryData) return;
+                    const search = this.glossarySearch.trim().toUpperCase();
+                    const typeFilter = this.glossaryTypeFilter;
+
+                    let totalFiles = 0;
+                    let totalUnits = 0;
+
+                    const filtered = this.glossaryData.files
+                        .map(file => {
+                            let units = file.units;
+                            if (typeFilter !== 'all') {
+                                units = units.filter(u => u.unit_type === typeFilter);
+                            }
+                            if (search) {
+                                units = units.filter(u => u.unit_name.toUpperCase().includes(search));
+                            }
+                            return units.length > 0 ? { ...file, units } : null;
+                        })
+                        .filter(Boolean);
+
+                    filtered.forEach(f => {
+                        totalFiles++;
+                        totalUnits += f.units.length;
+                    });
+
+                    this.glossaryFiltered = filtered;
+                    this.glossaryFilteredStats = { files: totalFiles, units: totalUnits };
+                },
+
+                onGlossarySearchInput() {
+                    clearTimeout(this.glossaryDebounceTimer);
+                    this.glossaryDebounceTimer = setTimeout(() => {
+                        this.renderGlossary();
+                    }, 300);
+                },
+
+                toggleGlossaryFile(filePath) {
+                    this.glossaryExpanded[filePath] = !this.glossaryExpanded[filePath];
+                    this.$forceUpdate();
+                },
+
+                toggleGlossaryUnit(key) {
+                    this.glossaryUnitExpanded[key] = !this.glossaryUnitExpanded[key];
+                    this.$forceUpdate();
+                },
+
+                askAboutUnit(unitName) {
+                    const query = `What does ${unitName} do?`;
+                    this.searchInput = query;
+                    document.getElementById('search-input').value = query;
+                    this.switchTab('search');
+                    this.performSearch();
+                },
+
+                async viewFile(filePath, lineStart, lineEnd) {
+                    this.fileViewer = { visible: true, path: filePath, content: null, loading: true, error: null, highlightStart: lineStart || 0, highlightEnd: lineEnd || 0 };
+                    try {
+                        const response = await fetch(`${this.apiBase}/file?path=${encodeURIComponent(filePath)}`);
+                        if (!response.ok) throw new Error(response.status === 404 ? 'File not found' : response.statusText);
+                        this.fileViewer.content = await response.text();
+                        // Scroll to highlighted line after render
+                        this.$nextTick(() => {
+                            if (lineStart) {
+                                const lineNumbers = document.querySelector('.file-viewer-line-numbers');
+                                if (lineNumbers) {
+                                    const lineHeight = parseFloat(getComputedStyle(lineNumbers).lineHeight);
+                                    const scrollTarget = (lineStart - 5) * lineHeight;
+                                    lineNumbers.parentElement.scrollTop = Math.max(0, scrollTarget);
+                                    // Sync code pane scroll
+                                    const codePane = document.querySelector('.file-viewer-code');
+                                    if (codePane) codePane.scrollTop = Math.max(0, scrollTarget);
+                                }
+                            }
+                        });
+                    } catch (err) {
+                        this.fileViewer.error = err.message || 'Failed to load file';
+                    } finally {
+                        this.fileViewer.loading = false;
+                    }
+                },
+
+                closeFileViewer() {
+                    this.fileViewer.visible = false;
                 },
 
                 selectFromHistory(query) {

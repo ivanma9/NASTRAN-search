@@ -7,9 +7,9 @@ import json
 import logging
 from functools import lru_cache
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from pydantic import BaseModel
@@ -112,6 +112,28 @@ class TranslateRequest(BaseModel):
 
 class TranslateResponse(BaseModel):
     translation: str
+
+
+class GlossaryUnit(BaseModel):
+    unit_name: str
+    unit_type: str = ""
+    file_path: str = ""
+    line_start: int = 0
+    line_end: int = 0
+    calls: list[str] = []
+    called_by: list[str] = []
+    common_blocks: list[str] = []
+
+
+class GlossaryFile(BaseModel):
+    file_path: str
+    units: list[GlossaryUnit] = []
+
+
+class GlossaryResponse(BaseModel):
+    files: list[GlossaryFile] = []
+    total_units: int = 0
+    total_files: int = 0
 
 
 @app.get("/api/status", response_model=IndexStatus)
@@ -380,6 +402,114 @@ Python translation:"""
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Translation failed: {e}")
+
+
+@lru_cache(maxsize=1)
+def _cached_glossary() -> GlossaryResponse:
+    """Cache glossary data since it only changes on re-ingest."""
+    import chromadb
+    settings = get_settings()
+    client = chromadb.PersistentClient(path=settings.chromadb_path)
+    collection = client.get_collection(name=settings.collection_name)
+
+    all_data = collection.get(include=["metadatas"])
+
+    graph = load_call_graph()
+    cb_index = load_common_blocks()
+
+    # Pre-build reverse index: unit_name -> [block_names]
+    unit_to_blocks: dict[str, list[str]] = {}
+    for block_name, block_data in cb_index.items():
+        for ref in block_data.get("referenced_by", []):
+            uname = ref.get("unit", "").upper()
+            if uname:
+                unit_to_blocks.setdefault(uname, []).append(block_name)
+
+    files_map: dict[str, list[GlossaryUnit]] = {}
+    seen: set[tuple[str, str]] = set()
+    for meta in all_data["metadatas"]:
+        fp = meta.get("file_path", "")
+        name = meta.get("unit_name", "")
+        if not name:
+            continue
+
+        key = (name.upper(), fp)
+        if key in seen:
+            continue
+        seen.add(key)
+
+        name_upper = name.upper()
+        node = graph.get(name_upper, {})
+
+        unit_blocks = unit_to_blocks.get(name_upper, [])
+
+        unit = GlossaryUnit(
+            unit_name=name,
+            unit_type=meta.get("unit_type", ""),
+            file_path=fp,
+            line_start=meta.get("line_start", 0),
+            line_end=meta.get("line_end", 0),
+            calls=node.get("calls", []),
+            called_by=node.get("called_by", []),
+            common_blocks=sorted(unit_blocks),
+        )
+
+        if fp not in files_map:
+            files_map[fp] = []
+        files_map[fp].append(unit)
+
+    files = []
+    for fp in sorted(files_map.keys()):
+        units = sorted(files_map[fp], key=lambda u: u.line_start)
+        files.append(GlossaryFile(file_path=fp, units=units))
+
+    return GlossaryResponse(
+        files=files,
+        total_units=sum(len(f.units) for f in files),
+        total_files=len(files),
+    )
+
+
+@app.get("/api/glossary", response_model=GlossaryResponse)
+async def get_glossary():
+    """Return all program units grouped by file, enriched with call graph and COMMON block data."""
+    try:
+        return _cached_glossary()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Glossary failed: {e}")
+
+
+@app.get("/api/file", response_class=PlainTextResponse)
+async def get_file(path: str = Query(..., description="Absolute path to source file")):
+    """Return the raw content of a NASTRAN source file."""
+    file_path = Path(path).resolve()
+
+    # Security: only allow reading files that exist in the ChromaDB index
+    # (i.e., files that were ingested). This prevents arbitrary file reads.
+    try:
+        import chromadb
+        settings = get_settings()
+        client = chromadb.PersistentClient(path=settings.chromadb_path)
+        collection = client.get_collection(name=settings.collection_name)
+        results = collection.get(
+            where={"file_path": str(file_path)},
+            include=[],
+            limit=1,
+        )
+        if not results["ids"]:
+            raise HTTPException(status_code=404, detail="File not found in index")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Index lookup failed: {e}")
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found on disk")
+
+    try:
+        return file_path.read_text(encoding="utf-8", errors="replace")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read file: {e}")
 
 
 def _build_chunks(results: list[dict]) -> list[ChunkResponse]:
