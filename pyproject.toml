@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "RAG pipeline for understanding legacy FORTRAN codebases"
 requires-python = ">=3.11"
 dependencies = [
-    "chromadb>=0.5.0",
+    "chromadb==1.5.2",
     "voyageai>=0.3.0",
     "openai>=1.0.0",
     "typer[all]>=0.12.0",
