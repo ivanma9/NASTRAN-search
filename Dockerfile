@@ -2,8 +2,9 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install uv for fast dependency resolution
+# Install uv and curl
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Copy project files
 COPY pyproject.toml uv.lock* ./
@@ -12,8 +13,9 @@ COPY src/ src/
 # Install dependencies
 RUN uv pip install --system .
 
-# Copy pre-built data (ChromaDB + indices)
-COPY data/ data/
+# Download pre-built ChromaDB index from GitHub release
+RUN curl -L https://github.com/ivanma9/NASTRAN-search/releases/download/v1.0-data/legacylens-data.tar.gz \
+    | tar -xz
 
 # Expose port
 EXPOSE 8000
