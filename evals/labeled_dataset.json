@@ -1,0 +1,146 @@
+[
+  {
+    "id": "labeled_001",
+    "question": "What does the DECOMP subroutine do?",
+    "labels": {
+      "query_type": "unit_explanation",
+      "requires_code_retrieval": true,
+      "requires_call_graph": false,
+      "requires_common_index": false,
+      "expected_complexity": "simple",
+      "domain": "matrix_operations"
+    }
+  },
+  {
+    "id": "labeled_002",
+    "question": "What subroutines reference COMMON block /SYSTEM/?",
+    "labels": {
+      "query_type": "common_block_lookup",
+      "requires_code_retrieval": true,
+      "requires_call_graph": false,
+      "requires_common_index": true,
+      "expected_complexity": "moderate",
+      "domain": "shared_state"
+    }
+  },
+  {
+    "id": "labeled_003",
+    "question": "How does NASTRAN-95 handle file I/O operations?",
+    "labels": {
+      "query_type": "conceptual",
+      "requires_code_retrieval": true,
+      "requires_call_graph": false,
+      "requires_common_index": false,
+      "expected_complexity": "complex",
+      "domain": "io_operations"
+    }
+  },
+  {
+    "id": "labeled_004",
+    "question": "What are the dependencies of the SOLVER subroutine?",
+    "labels": {
+      "query_type": "dependency_analysis",
+      "requires_code_retrieval": true,
+      "requires_call_graph": true,
+      "requires_common_index": false,
+      "expected_complexity": "moderate",
+      "domain": "call_relationships"
+    }
+  },
+  {
+    "id": "labeled_005",
+    "question": "Show me error handling patterns in the codebase",
+    "labels": {
+      "query_type": "pattern_discovery",
+      "requires_code_retrieval": true,
+      "requires_call_graph": false,
+      "requires_common_index": false,
+      "expected_complexity": "complex",
+      "domain": "error_handling"
+    }
+  },
+  {
+    "id": "labeled_006",
+    "question": "Where is the main entry point of NASTRAN-95?",
+    "labels": {
+      "query_type": "entry_point",
+      "requires_code_retrieval": true,
+      "requires_call_graph": false,
+      "requires_common_index": false,
+      "expected_complexity": "simple",
+      "domain": "program_structure"
+    }
+  },
+  {
+    "id": "labeled_007",
+    "question": "How are element stiffness matrices assembled?",
+    "labels": {
+      "query_type": "conceptual",
+      "requires_code_retrieval": true,
+      "requires_call_graph": false,
+      "requires_common_index": false,
+      "expected_complexity": "complex",
+      "domain": "finite_elements"
+    }
+  },
+  {
+    "id": "labeled_008",
+    "question": "Which routines use COMMON /PARAMS/?",
+    "labels": {
+      "query_type": "common_block_lookup",
+      "requires_code_retrieval": true,
+      "requires_call_graph": false,
+      "requires_common_index": true,
+      "expected_complexity": "moderate",
+      "domain": "shared_state"
+    }
+  },
+  {
+    "id": "labeled_009",
+    "question": "Explain the BANDIT module",
+    "labels": {
+      "query_type": "unit_explanation",
+      "requires_code_retrieval": true,
+      "requires_call_graph": false,
+      "requires_common_index": false,
+      "expected_complexity": "simple",
+      "domain": "module_overview"
+    }
+  },
+  {
+    "id": "labeled_010",
+    "question": "How does matrix decomposition work in NASTRAN?",
+    "labels": {
+      "query_type": "conceptual",
+      "requires_code_retrieval": true,
+      "requires_call_graph": true,
+      "requires_common_index": false,
+      "expected_complexity": "complex",
+      "domain": "matrix_operations"
+    }
+  },
+  {
+    "id": "labeled_011",
+    "question": "What does DCOMP depend on?",
+    "labels": {
+      "query_type": "dependency_analysis",
+      "requires_code_retrieval": true,
+      "requires_call_graph": true,
+      "requires_common_index": false,
+      "expected_complexity": "moderate",
+      "domain": "call_relationships"
+    }
+  },
+  {
+    "id": "labeled_012",
+    "question": "Find all READ/WRITE statements in the codebase",
+    "labels": {
+      "query_type": "pattern_discovery",
+      "requires_code_retrieval": true,
+      "requires_call_graph": false,
+      "requires_common_index": false,
+      "expected_complexity": "complex",
+      "domain": "io_operations"
+    }
+  }
+]

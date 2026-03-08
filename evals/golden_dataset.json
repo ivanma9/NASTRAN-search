@@ -1,0 +1,77 @@
+[
+  {
+    "id": "golden_001",
+    "question": "What does the DECOMP subroutine do?",
+    "expected_answer_contains": ["matrix", "decomposition", "factor"],
+    "expected_unit_mentioned": "DECOMP",
+    "category": "unit_explanation",
+    "difficulty": "easy"
+  },
+  {
+    "id": "golden_002",
+    "question": "What subroutines reference COMMON block /SYSTEM/?",
+    "expected_answer_contains": ["COMMON", "SYSTEM"],
+    "expected_mentions_units": true,
+    "category": "common_block_lookup",
+    "difficulty": "medium"
+  },
+  {
+    "id": "golden_003",
+    "question": "How does NASTRAN-95 handle file I/O operations?",
+    "expected_answer_contains": ["READ", "WRITE", "GINO"],
+    "category": "conceptual",
+    "difficulty": "medium"
+  },
+  {
+    "id": "golden_004",
+    "question": "What are the dependencies of the SOLVER subroutine?",
+    "expected_answer_contains": ["calls", "called by"],
+    "expected_mentions_call_graph": true,
+    "category": "dependency_analysis",
+    "difficulty": "medium"
+  },
+  {
+    "id": "golden_005",
+    "question": "Show me error handling patterns in the codebase",
+    "expected_answer_contains": ["MESAGE", "error", "FATAL"],
+    "category": "pattern_discovery",
+    "difficulty": "hard"
+  },
+  {
+    "id": "golden_006",
+    "question": "Where is the main entry point of NASTRAN-95?",
+    "expected_answer_contains": ["PROGRAM", "main", "entry"],
+    "category": "entry_point",
+    "difficulty": "easy"
+  },
+  {
+    "id": "golden_007",
+    "question": "How are element stiffness matrices assembled?",
+    "expected_answer_contains": ["element", "stiffness", "matrix", "assemble"],
+    "category": "conceptual",
+    "difficulty": "hard"
+  },
+  {
+    "id": "golden_008",
+    "question": "What does the GINO buffer management system do?",
+    "expected_answer_contains": ["GINO", "buffer", "data"],
+    "category": "system_explanation",
+    "difficulty": "medium"
+  },
+  {
+    "id": "golden_009",
+    "question": "Explain what function VECNORM computes",
+    "expected_answer_contains": ["vector", "norm"],
+    "expected_unit_mentioned": "VECNORM",
+    "category": "unit_explanation",
+    "difficulty": "easy"
+  },
+  {
+    "id": "golden_010",
+    "question": "What subroutines call XREAD?",
+    "expected_answer_contains": ["called by"],
+    "expected_unit_mentioned": "XREAD",
+    "category": "dependency_analysis",
+    "difficulty": "medium"
+  }
+]
